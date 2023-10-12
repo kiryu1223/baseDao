@@ -10,7 +10,7 @@ java lambda to static expressionTree to SQL
 <dependency>
     <groupId>io.github.kiryu1223</groupId>
     <artifactId>baseDao</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 </dependency>
 ```
 # how to start
