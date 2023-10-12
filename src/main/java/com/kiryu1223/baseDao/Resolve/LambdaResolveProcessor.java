@@ -113,7 +113,44 @@ public class LambdaResolveProcessor extends AbstractProcessor
                     {
                         if (tree.getParameters().isEmpty() && tree.getReturnType() != null)
                         {
-                            var returnType = (JCTree.JCIdent) tree.getReturnType();
+                            JCTree.JCIdent returnType=null;
+                            if (tree.getReturnType() instanceof JCTree.JCPrimitiveTypeTree)
+                            {
+                                var primitiveType=(JCTree.JCPrimitiveTypeTree)tree.getReturnType();
+                                switch (primitiveType.getPrimitiveTypeKind())
+                                {
+                                    case BOOLEAN:
+                                        returnType=treeMaker.Ident(names.fromString("Boolean"));
+                                        break;
+                                    case BYTE:
+                                        returnType=treeMaker.Ident(names.fromString("Byte"));
+                                        break;
+                                    case SHORT:
+                                        returnType=treeMaker.Ident(names.fromString("Short"));
+                                        break;
+                                    case INT:
+                                        returnType=treeMaker.Ident(names.fromString("Integer"));
+                                        break;
+                                    case LONG:
+                                        returnType=treeMaker.Ident(names.fromString("Long"));
+                                        break;
+                                    case CHAR:
+                                        returnType=treeMaker.Ident(names.fromString("Character"));
+                                        break;
+                                    case FLOAT:
+                                        returnType=treeMaker.Ident(names.fromString("Float"));
+                                        break;
+                                    case DOUBLE:
+                                        returnType=treeMaker.Ident(names.fromString("Double"));
+                                        break;
+                                    case VOID:
+                                        returnType=treeMaker.Ident(names.fromString("Void"));
+                                       break;
+                                }
+                            }else
+                            {
+                                returnType = (JCTree.JCIdent) tree.getReturnType();
+                            }
                             var sts = tree.getBody().getStatements();
                             if (sts.get(sts.size() - 1) instanceof JCTree.JCReturn)
                             {

@@ -25,9 +25,9 @@ public class DBUtil
     {
         if (values != null)
         {
-            for (int i = 1; i <= values.size(); i++)
+            for (int i = 0; i < values.size(); i++)
             {
-                ps.setObject(i, values.get(i));
+                ps.setObject(i + 1, values.get(i));
             }
         }
     }
@@ -100,13 +100,14 @@ public class DBUtil
                     doResolve(expression, methodMap, pairs, methods);
                 }
                 var constructor = resultType.getConstructor();
+
                 while (rs.next())
                 {
                     var r = constructor.newInstance();
                     for (int i = 1; i <= md.getColumnCount(); i++)
                     {
                         var setter = methods.get(i - 1);
-                        var o = rs.getObject(i, setter.getReturnType());
+                        var o = rs.getObject(i, setter.getParameterTypes()[0]);
                         if (o != null)
                         {
                             setter.invoke(r, o);

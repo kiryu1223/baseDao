@@ -108,7 +108,7 @@ public class Cache
         for (var method : c.getDeclaredMethods())
         {
             method.setAccessible(true);
-            if (method.getReturnType() != void.class && method.getParameterCount() > 0)
+            if (method.getParameterCount() ==1)
             {
                 methodMap.put(method.getName(), method);
             }

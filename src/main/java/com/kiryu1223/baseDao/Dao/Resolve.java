@@ -330,23 +330,23 @@ public class Resolve
                 case Count:
                     if (dbRef.getRef().equals(""))
                     {
-                        entity.sql.append("count(*)").append(",");
+                        entity.sql.append("count(*)");
                     }
                     else
                     {
                         entity.sql.append("count(").append(indexMapping(dbRef.getIndex())).append(".")
-                                .append(map.get(dbRef.getRef())).append(")").append(",");
+                                .append(map.get(dbRef.getRef())).append(")");
                     }
                     break;
                 case Sum:
                     if (dbRef.getRef().equals(""))
                     {
-                        entity.sql.append("sum(*)").append(",");
+                        entity.sql.append("sum(*)");
                     }
                     else
                     {
                         entity.sql.append("sum(").append(indexMapping(dbRef.getIndex())).append(".")
-                                .append(map.get(dbRef.getRef())).append(")").append(",");
+                                .append(map.get(dbRef.getRef())).append(")");
                     }
                     break;
             }
@@ -357,10 +357,10 @@ public class Resolve
             switch (dbFuncExpression.getDbFuncType())
             {
                 case Count:
-                    entity.sql.append("count(").append(value.getValue()).append(")").append(",");
+                    entity.sql.append("count(").append(value.getValue()).append(")");
                     break;
                 case Sum:
-                    entity.sql.append("sum(").append(value.getValue()).append(")").append(",");
+                    entity.sql.append("sum(").append(value.getValue()).append(")");
                     break;
             }
         }
@@ -372,12 +372,12 @@ public class Resolve
                 case Count:
                     entity.sql.append("count(");
                     doResolveDbFuncExpression(funcExpression, entity, queryClass);
-                    entity.sql.append(")").append(",");
+                    entity.sql.append(")");
                     break;
                 case Sum:
                     entity.sql.append("sum(");
                     doResolveDbFuncExpression(funcExpression, entity, queryClass);
-                    entity.sql.append(")").append(",");
+                    entity.sql.append(")");
                     break;
             }
         }
