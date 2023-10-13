@@ -68,8 +68,8 @@ public class Resolve
     {
         var entity = new Entity();
         entity.sql.append("delete").append(" ").append(indexMapping(0))
-                .append(".*").append(" ").append("from").append(" ").append("`")
-                .append(Cache.getTableName(delete.getC1())).append("`").append(" ")
+                .append(".*").append(" ").append("from").append(" ")
+                .append(Cache.getTableName(delete.getC1())).append(" ")
                 .append("as").append(" ").append(indexMapping(0)).append(" ");
         for (var base : delete.getBases())
         {
@@ -109,7 +109,7 @@ public class Resolve
     {
         var batchEntity = new BatchEntity();
         var type = ts.get(0).getClass();
-        batchEntity.sql.append("insert into ").append("`").append(Cache.getTableName(type)).append("`").append("(");
+        batchEntity.sql.append("insert into ").append(Cache.getTableName(type)).append("(");
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(type);
         var fields = Cache.getTypeFields(type);
         int count = 0;
@@ -188,7 +188,7 @@ public class Resolve
                 entity.sql.append("full join ");
                 break;
         }
-        entity.sql.append("`").append(Cache.getTableName(join.getJoinClass())).append("`")
+        entity.sql.append(Cache.getTableName(join.getJoinClass()))
                 .append(" ").append("as").append(" ")
                 .append(indexMapping(queryClass.indexOf(join.getJoinClass()))).append(" ");
     }
@@ -216,8 +216,7 @@ public class Resolve
         {
             if (joinClass == null || !joinClass.contains(c))
             {
-                var selectedTableName = Cache.getTableName(c);
-                entity.sql.append("`").append(selectedTableName).append("`").append(" ").append("as").append(" ")
+                entity.sql.append(Cache.getTableName(c)).append(" ").append("as").append(" ")
                         .append(indexMapping(queryClass.indexOf(c))).append(",");
             }
         }
@@ -398,7 +397,7 @@ public class Resolve
     private static void insertOne(Entity entity, InsertOne<?> insertOne)
     {
         var target = insertOne.getTarget();
-        entity.sql.append("insert into ").append("`").append(Cache.getTableName(target.getClass())).append("`").append("(");
+        entity.sql.append("insert into ").append(Cache.getTableName(target.getClass())).append("(");
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
         int count = 0;
         for (var field : target.getClass().getDeclaredFields())
@@ -436,8 +435,8 @@ public class Resolve
     private static void set(Entity entity, Set<?> set)
     {
         var target = set.getTarget();
-        entity.sql.append("update ").append("`").append(Cache.getTableName(target.getClass())).append("`")
-                .append(" ").append("as").append(" ").append(indexMapping(0)).append(" ").append("set").append(" ");
+        entity.sql.append("update ").append(Cache.getTableName(target.getClass())).append(" ")
+                .append("as").append(" ").append(indexMapping(0)).append(" ").append("set").append(" ");
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
         boolean flag = false;
         for (var field : target.getClass().getDeclaredFields())
@@ -528,6 +527,16 @@ public class Resolve
                 return "and";
             case Or:
                 return "or";
+            case PLUS:
+                return "+";
+            case MINUS:
+                return "-";
+            case MUL:
+                return "*";
+            case DIV:
+                return "/";
+            case MOD:
+                return "%";
             default:
                 throw new RuntimeException("未知运算符");
         }

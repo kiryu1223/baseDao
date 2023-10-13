@@ -6,7 +6,7 @@
 
     <groupId>io.github.kiryu1223</groupId>
     <artifactId>baseDao</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <name>baseDao</name>
     <description>java lambda to static expressionTree to SQL</description>

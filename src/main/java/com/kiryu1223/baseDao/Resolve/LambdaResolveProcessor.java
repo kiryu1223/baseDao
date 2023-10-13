@@ -64,6 +64,11 @@ public class LambdaResolveProcessor extends AbstractProcessor
         opmap.put(JCTree.Tag.AND, treeMaker.Select(operator, names.fromString("And")));
         opmap.put(JCTree.Tag.OR, treeMaker.Select(operator, names.fromString("Or")));
         opmap.put(JCTree.Tag.NOT, treeMaker.Select(operator, names.fromString("NOT")));
+        opmap.put(JCTree.Tag.PLUS, treeMaker.Select(operator, names.fromString("PLUS")));
+        opmap.put(JCTree.Tag.MINUS, treeMaker.Select(operator, names.fromString("MINUS")));
+        opmap.put(JCTree.Tag.MUL, treeMaker.Select(operator, names.fromString("MUL")));
+        opmap.put(JCTree.Tag.DIV, treeMaker.Select(operator, names.fromString("DIV")));
+        opmap.put(JCTree.Tag.MOD, treeMaker.Select(operator, names.fromString("MOD")));
 
         strOpmap.put("contains", treeMaker.Select(operator, names.fromString("Like")));
         strOpmap.put("startsWith", treeMaker.Select(operator, names.fromString("StartLike")));
@@ -113,41 +118,42 @@ public class LambdaResolveProcessor extends AbstractProcessor
                     {
                         if (tree.getParameters().isEmpty() && tree.getReturnType() != null)
                         {
-                            JCTree.JCIdent returnType=null;
+                            JCTree.JCIdent returnType = null;
                             if (tree.getReturnType() instanceof JCTree.JCPrimitiveTypeTree)
                             {
-                                var primitiveType=(JCTree.JCPrimitiveTypeTree)tree.getReturnType();
+                                var primitiveType = (JCTree.JCPrimitiveTypeTree) tree.getReturnType();
                                 switch (primitiveType.getPrimitiveTypeKind())
                                 {
                                     case BOOLEAN:
-                                        returnType=treeMaker.Ident(names.fromString("Boolean"));
+                                        returnType = treeMaker.Ident(names.fromString("Boolean"));
                                         break;
                                     case BYTE:
-                                        returnType=treeMaker.Ident(names.fromString("Byte"));
+                                        returnType = treeMaker.Ident(names.fromString("Byte"));
                                         break;
                                     case SHORT:
-                                        returnType=treeMaker.Ident(names.fromString("Short"));
+                                        returnType = treeMaker.Ident(names.fromString("Short"));
                                         break;
                                     case INT:
-                                        returnType=treeMaker.Ident(names.fromString("Integer"));
+                                        returnType = treeMaker.Ident(names.fromString("Integer"));
                                         break;
                                     case LONG:
-                                        returnType=treeMaker.Ident(names.fromString("Long"));
+                                        returnType = treeMaker.Ident(names.fromString("Long"));
                                         break;
                                     case CHAR:
-                                        returnType=treeMaker.Ident(names.fromString("Character"));
+                                        returnType = treeMaker.Ident(names.fromString("Character"));
                                         break;
                                     case FLOAT:
-                                        returnType=treeMaker.Ident(names.fromString("Float"));
+                                        returnType = treeMaker.Ident(names.fromString("Float"));
                                         break;
                                     case DOUBLE:
-                                        returnType=treeMaker.Ident(names.fromString("Double"));
+                                        returnType = treeMaker.Ident(names.fromString("Double"));
                                         break;
                                     case VOID:
-                                        returnType=treeMaker.Ident(names.fromString("Void"));
-                                       break;
+                                        returnType = treeMaker.Ident(names.fromString("Void"));
+                                        break;
                                 }
-                            }else
+                            }
+                            else
                             {
                                 returnType = (JCTree.JCIdent) tree.getReturnType();
                             }
@@ -192,7 +198,7 @@ public class LambdaResolveProcessor extends AbstractProcessor
                             {
                                 if (!classMap.containsKey(tree.getStartPosition()))
                                 {
-                                    classMap.put(tree.getStartPosition(), new ArrayList<JCTree.JCFieldAccess>());
+                                    classMap.put(tree.getStartPosition(), new ArrayList<>());
                                 }
                                 var tmp = classMap.get(tree.getStartPosition());
                                 for (var clazz : tree.getArguments())
@@ -280,7 +286,7 @@ public class LambdaResolveProcessor extends AbstractProcessor
                             {
                                 if (!classMap.containsKey(tree.getStartPosition()))
                                 {
-                                    classMap.put(tree.getStartPosition(), new ArrayList<JCTree.JCFieldAccess>());
+                                    classMap.put(tree.getStartPosition(), new ArrayList<>());
                                 }
                                 var tmp = classMap.get(tree.getStartPosition());
                                 for (var clazz : tree.getArguments())

@@ -20,5 +20,10 @@ public enum Operator
     EndLike,
     And,
     Or,
+    PLUS,
+    MINUS,
+    MUL,
+    DIV,
+    MOD,
     ;
 }

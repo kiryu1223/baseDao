@@ -36,8 +36,10 @@ public class Cache
 
     private static void addClassNameToTableNameMapping(Class<?> c)
     {
-        var value = (c.isAnnotationPresent(Table.class) ? c.getAnnotation(Table.class).name() : c.getSimpleName()).toLowerCase();
-        ClassNameToTableNameMappingMap.put(c, value);
+        var table = c.isAnnotationPresent(Table.class) ?
+                "`" + c.getAnnotation(Table.class).schema() + "`.`" + c.getAnnotation(Table.class).name() + "`"
+                : "`" + c.getSimpleName() + "`";
+        ClassNameToTableNameMappingMap.put(c, table);
     }
 
     public static String getTableName(Class<?> c)
@@ -108,7 +110,7 @@ public class Cache
         for (var method : c.getDeclaredMethods())
         {
             method.setAccessible(true);
-            if (method.getParameterCount() ==1)
+            if (method.getParameterCount() == 1)
             {
                 methodMap.put(method.getName(), method);
             }
@@ -129,9 +131,9 @@ public class Cache
 
     public static List<Field> getTypeFields(Class<?> c)
     {
-        if(!TypeFieldMap.containsKey(c))
+        if (!TypeFieldMap.containsKey(c))
         {
-            TypeFieldMap.put(c,new ArrayList<>(Arrays.asList(c.getDeclaredFields())));
+            TypeFieldMap.put(c, new ArrayList<>(Arrays.asList(c.getDeclaredFields())));
         }
         return TypeFieldMap.get(c);
     }
