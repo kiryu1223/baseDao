@@ -99,7 +99,7 @@ select a.id from user as a
 - 返回自己定义的新对象
 ```java
 baseDao.query(user.class)
-        .select(a->new MyType(){{
+        .select(a-> (MyType) new MyType(){{
             setId(a.getId);
             setName(a.getName);
         }});
@@ -149,3 +149,64 @@ baseDao.query(user.class)
 ```sql
 select b.* from user as a leftjoin book as b on a.id = b.id
 ```
+
+5.`orderBy`,`descOrderBy`
+
+**根据选择的字段在数据库排序**
+
+```java
+baseDao.query(user.class)
+        .orderBy(a->a.getid);
+```
+等同于
+```sql
+select a.* from user as a order by a.id
+```
+
+6.`take`,`skip`
+
+**获取xx跳过xx，等同于mysql中的limit和offset**
+
+```java
+baseDao.query(user.class)
+        .take(3)
+        .skip(1);
+```
+等同于
+```sql
+select a.* from user as a limit 3 offset 1
+```
+
+7.`If`,`IfElse`
+
+**内置的条件动态sql**
+
+if的第一个参数为true时，if的第二个参数将参与sql生成
+
+ifelse根据的第一个参数来决定时第二个参数还是第三个参数将参与sql生成
+
+8.`toList`
+
+**返回List结果集**
+
+>默认返回ArrayList
+
+```java
+List<User> res = baseDao.query(User.class).toList();
+//单表情况下可以在无select的情况下直接toList，此时会返回查询的pojo类的集合
+
+List<User> res = baseDao.query(User.class).select(a->a).toList();
+//select a.* from user as a
+
+List<Integer> res = baseDao.query(User.class).select(a->a.getId).toList();
+//select a.id from user as a
+
+List<MyType> res = baseDao.query(User.class)
+                            .where(a->a.getId == 5)
+                            .select(a-> (MyType) new MyType(){{
+                                    setId(a.getId);
+                                    setName(a.getName);
+                            }});
+//select a.id,a.name from user as a where a.id = 5
+```
+
