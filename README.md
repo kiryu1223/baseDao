@@ -10,11 +10,12 @@ java lambda to static expressionTree to SQL
 <dependency>
     <groupId>io.github.kiryu1223</groupId>
     <artifactId>baseDao</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 </dependency>
 ```
 # how to start
-1.添加maven依赖
+1.添加maven依赖,并且在共享构建过程VM选项中添加
+>-Djps.track.ap.dependencies=false
 
 2.添加配置类
 ```java
@@ -32,6 +33,7 @@ public class baseDaoConfig
 3.使用idea连接数据库并右键生成持久化映射
 
 4.为你需要使用类添加`@Resolve`或`@Dao`注解
+
 ```java
 import static com.kiryu1223.baseDao.Dao.DBFunc.Sum;
 

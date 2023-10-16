@@ -74,6 +74,7 @@ public class LambdaResolveProcessor extends AbstractProcessor
         strOpmap.put("startsWith", treeMaker.Select(operator, names.fromString("StartLike")));
         strOpmap.put("endsWith", treeMaker.Select(operator, names.fromString("EndLike")));
         strOpmap.put("equals", treeMaker.Select(operator, names.fromString("EQ")));
+        strOpmap.put("in", treeMaker.Select(operator, names.fromString("IN")));
 
         var iExpression = treeMaker.Select(treeMaker.Ident(names.fromString(expV2)), names.fromString("IExpression"));
         ofmap.put(IExpression.Type.Binary, treeMaker.Select(iExpression, names.fromString("binary")));
@@ -83,6 +84,7 @@ public class LambdaResolveProcessor extends AbstractProcessor
         ofmap.put(IExpression.Type.New, treeMaker.Select(iExpression, names.fromString("New")));
         ofmap.put(IExpression.Type.Mapping, treeMaker.Select(iExpression, names.fromString("mapping")));
         ofmap.put(IExpression.Type.DbFunc, treeMaker.Select(iExpression, names.fromString("dbFunc")));
+        ofmap.put(IExpression.Type.Parens, treeMaker.Select(iExpression, names.fromString("parens")));
 
         typeMap.put(Long.class, treeMaker.Select(treeMaker.Ident(names.fromString("Long")), names.fromString("class")));
         typeMap.put(Double.class, treeMaker.Select(treeMaker.Ident(names.fromString("Double")), names.fromString("class")));
@@ -247,11 +249,13 @@ public class LambdaResolveProcessor extends AbstractProcessor
                                         break;
                                     }
                                     case "select":
+                                    case "selectDistinct":
                                     {
                                         select(tree, classMap, fieldMap, returnMap);
                                         break;
                                     }
                                     case "orderBy":
+                                    case "descOrderBy":
                                     {
                                         orderBy(tree.getStartPosition(), tree, classMap, fieldMap);
                                         break;
@@ -335,11 +339,13 @@ public class LambdaResolveProcessor extends AbstractProcessor
                                         break;
                                     }
                                     case "select":
+                                    case "selectDistinct":
                                     {
                                         select(tree, classMap, fieldMap, returnMap);
                                         break;
                                     }
                                     case "orderBy":
+                                    case "descOrderBy":
                                     {
                                         orderBy(tree.getStartPosition(), tree, classMap, fieldMap);
                                         break;
@@ -542,6 +548,10 @@ public class LambdaResolveProcessor extends AbstractProcessor
         {
             return doResolveNewClass((JCTree.JCNewClass) expression, names, classes, fieldMap);
         }
+        else if (expression instanceof JCTree.JCParens)
+        {
+            return doResolveParens((JCTree.JCParens) expression, names, classes, fieldMap);
+        }
         return null;
     }
 
@@ -613,7 +623,20 @@ public class LambdaResolveProcessor extends AbstractProcessor
                 }
                 else
                 {
-                    return treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Value), List.of(methodInvocation));
+                    if (!methodInvocation.getArguments().isEmpty())
+                    {
+                        if (identifier.toString().equals("contains"))
+                        {
+                            var op = strOpmap.get("in");
+                            var left = doResolve(methodInvocation.getArguments().get(0), names, classes, fieldMap);
+                            var right = treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Value), List.of(ident));
+                            return treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Binary), List.of(left, right, op));
+                        }
+                    }
+                    else
+                    {
+                        return treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Value), List.of(methodInvocation));
+                    }
                 }
             }
             else if (fieldAccess.getExpression() instanceof JCTree.JCFieldAccess)
@@ -662,5 +685,11 @@ public class LambdaResolveProcessor extends AbstractProcessor
         var right = doResolve(binary.getRightOperand(), names, classes, fieldMap);
         var op = opmap.get(binary.getTag());
         return treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Binary), List.of(left, right, op));
+    }
+
+    private JCTree.JCMethodInvocation doResolveParens(JCTree.JCParens parens, java.util.List<String> names, java.util.List<JCTree.JCFieldAccess> classes, Map<String, Map<String, JCTree.JCIdent>> fieldMap)
+    {
+        var done = doResolve(parens.getExpression(), names, classes, fieldMap);
+        return treeMaker.Apply(List.nil(), ofmap.get(IExpression.Type.Parens), List.of(done));
     }
 }

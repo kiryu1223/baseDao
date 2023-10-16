@@ -6,7 +6,7 @@ public class MappingExpression implements IExpression
     private final String source;
     private final IExpression value;
 
-    public MappingExpression(String source, IExpression value)
+    MappingExpression(String source, IExpression value)
     {
         this.source = source;
         this.value = value;

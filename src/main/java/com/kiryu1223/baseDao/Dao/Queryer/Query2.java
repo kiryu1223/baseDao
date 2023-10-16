@@ -67,22 +67,31 @@ public class Query2<T1, T2> extends Statement2<T1, T2>
     {
         throw new NoWayException();
     }
+    public <R> Query2<T1, T2> descOrderBy(Func00<T1, T2, R> func)
+    {
+        throw new NoWayException();
+    }
 
     public Query2<T1, T2> orderBy(DbRefExpression dbRefExpression)
     {
-        bases.add(new OrderBy(dbRefExpression));
+        bases.add(new OrderBy(dbRefExpression, false));
+        return this;
+    }
+    public Query2<T1, T2> descOrderBy(DbRefExpression dbRefExpression)
+    {
+        bases.add(new OrderBy(dbRefExpression, true));
         return this;
     }
 
-    public Query2<T1, T2> limit(int offset, int rows)
+    public Query2<T1, T2> take(int count)
     {
-        bases.add(new Limit(offset, rows));
+        bases.add(new Take(count));
         return this;
     }
 
-    public Query2<T1, T2> limit(int rows)
+    public Query2<T1, T2> skip(int count)
     {
-        bases.add(new Limit(rows));
+        bases.add(new Skip(count));
         return this;
     }
 

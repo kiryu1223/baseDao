@@ -1,9 +1,6 @@
 package com.kiryu1223.baseDao.Dao.Queryer;
 
-import com.kiryu1223.baseDao.Dao.Base.Join;
-import com.kiryu1223.baseDao.Dao.Base.Limit;
-import com.kiryu1223.baseDao.Dao.Base.OrderBy;
-import com.kiryu1223.baseDao.Dao.Base.Where;
+import com.kiryu1223.baseDao.Dao.Base.*;
 import com.kiryu1223.baseDao.Dao.DBUtil;
 import com.kiryu1223.baseDao.Dao.Entity;
 import com.kiryu1223.baseDao.Dao.Func.Func0;
@@ -131,22 +128,31 @@ public class Query<T> extends Statement<T>
     {
         throw new NoWayException();
     }
+    public <R> Query<T> descOrderBy(Func0<T, R> func)
+    {
+        throw new NoWayException();
+    }
 
     public Query<T> orderBy(DbRefExpression dbRefExpression)
     {
-        bases.add(new OrderBy(dbRefExpression));
+        bases.add(new OrderBy(dbRefExpression, false));
+        return this;
+    }
+    public Query<T> descOrderBy(DbRefExpression dbRefExpression)
+    {
+        bases.add(new OrderBy(dbRefExpression, true));
         return this;
     }
 
-    public Query<T> limit(int offset, int rows)
+    public Query<T> take(int count)
     {
-        bases.add(new Limit(offset, rows));
+        bases.add(new Take(count));
         return this;
     }
 
-    public Query<T> limit(int rows)
+    public Query<T> skip(int count)
     {
-        bases.add(new Limit(rows));
+        bases.add(new Skip(count));
         return this;
     }
 

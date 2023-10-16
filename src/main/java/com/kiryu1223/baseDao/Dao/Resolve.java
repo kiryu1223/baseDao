@@ -31,9 +31,13 @@ public class Resolve
             {
                 where(entity, ((Where) base).getOperatorExpression(), queryClasses);
             }
-            else if (base instanceof Limit)
+            else if (base instanceof Take)
             {
-                limit(entity, (Limit) base);
+                take(entity, (Take) base);
+            }
+            else if (base instanceof Skip)
+            {
+                skip(entity, (Skip) base);
             }
             else if (base instanceof OrderBy)
             {
@@ -227,94 +231,142 @@ public class Resolve
     {
         if (expression instanceof MappingExpression)
         {
-            var mapping = (MappingExpression) expression;
-            doResolve(entity, mapping.getValue(), queryClass);
+            doResolveMappingExpression((MappingExpression) expression, entity, queryClass);
         }
         else if (expression instanceof DbRefExpression)
         {
-            var dbRef = (DbRefExpression) expression;
-            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(queryClass.get(dbRef.getIndex()));
-            entity.sql.append(indexMapping(dbRef.getIndex())).append(".").append(map.get(dbRef.getRef()));
+            doResolveDbRefExpression((DbRefExpression) expression, entity, queryClass);
         }
         else if (expression instanceof DbFuncExpression)
         {
-            var dbFunc = (DbFuncExpression) expression;
-            doResolveDbFuncExpression(dbFunc, entity, queryClass);
+            doResolveDbFuncExpression((DbFuncExpression) expression, entity, queryClass);
         }
         else if (expression instanceof BinaryExpression)
         {
-            var binary = (BinaryExpression) expression;
-            doResolve(entity, binary.getLeft(), queryClass);
-            if (binary.getOperator() != Operator.And && binary.getOperator() != Operator.Or)
-            {
-                entity.sql.append(" ");
-            }
-            if (binary.getRight() instanceof ValueExpression && ((ValueExpression) binary.getRight()).getValue() == null)
-            {
-                switch (binary.getOperator())
-                {
-                    case EQ:
-                        entity.sql.append("is").append(" ");
-                        break;
-                    case NE:
-                        entity.sql.append("is not").append(" ");
-                        break;
-                }
-            }
-            else
-            {
-                entity.sql.append(operatorToString(binary.getOperator())).append(" ");
-            }
-            if (binary.getOperator() == Operator.Like || binary.getOperator() == Operator.StartLike || binary.getOperator() == Operator.EndLike)
-            {
-                var value = (ValueExpression) binary.getRight();
-                entity.sql.append("?");
-                switch (binary.getOperator())
-                {
-                    case Like:
-                        entity.values.add("%" + value.getValue() + "%");
-                        break;
-                    case StartLike:
-                        entity.values.add(value.getValue() + "%");
-                        break;
-                    case EndLike:
-                        entity.values.add("%" + value.getValue());
-                        break;
-                }
-                entity.values.add(value.getValue());
-            }
-            else
-            {
-                doResolve(entity, binary.getRight(), queryClass);
-            }
-            if (binary.getOperator() != Operator.And && binary.getOperator() != Operator.Or)
-            {
-                entity.sql.append(" ");
-            }
+            doResolveBinaryExpression((BinaryExpression) expression, entity, queryClass);
         }
         else if (expression instanceof UnaryExpression)
         {
-            var unary = (UnaryExpression) expression;
-            if (unary.getOperator() == Operator.NOT)
+            doResolveUnaryExpression((UnaryExpression) expression, entity, queryClass);
+        }
+        else if (expression instanceof ValueExpression)
+        {
+            doResolveValueExpression((ValueExpression) expression, entity, queryClass);
+        }
+        else if (expression instanceof ParensExpression)
+        {
+            doResolveParensExpression((ParensExpression) expression, entity, queryClass);
+        }
+    }
+
+    private static void doResolveMappingExpression(MappingExpression mapping, Entity entity, List<Class<?>> queryClass)
+    {
+        doResolve(entity, mapping.getValue(), queryClass);
+    }
+
+    private static void doResolveDbRefExpression(DbRefExpression dbRef, Entity entity, List<Class<?>> queryClass)
+    {
+        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(queryClass.get(dbRef.getIndex()));
+        entity.sql.append(indexMapping(dbRef.getIndex())).append(".").append(map.get(dbRef.getRef()));
+    }
+
+    private static void doResolveUnaryExpression(UnaryExpression unary, Entity entity, List<Class<?>> queryClass)
+    {
+        if (unary.getOperator() == Operator.NOT)
+        {
+            if (unary.getExpression() instanceof ParensExpression)
+            {
+                entity.sql.append("!");
+                doResolve(entity, unary.getExpression(), queryClass);
+            }
+            else
             {
                 entity.sql.append("!(");
                 doResolve(entity, unary.getExpression(), queryClass);
                 entity.sql.deleteCharAt(entity.sql.length() - 1).append(")").append(" ");
             }
         }
-        else if (expression instanceof ValueExpression)
+    }
+
+    private static void doResolveValueExpression(ValueExpression value, Entity entity, List<Class<?>> queryClass)
+    {
+        if (value.getValue() != null)
         {
-            var value = (ValueExpression) expression;
-            if (value.getValue() != null)
+            entity.sql.append("?");
+            entity.values.add(value.getValue());
+        }
+        else
+        {
+            entity.sql.append("null");
+        }
+    }
+
+    private static void doResolveBinaryExpression(BinaryExpression binary, Entity entity, List<Class<?>> queryClass)
+    {
+        doResolve(entity, binary.getLeft(), queryClass);
+        if (entity.sql.charAt(entity.sql.length() - 1) != ' ') entity.sql.append(" ");
+        if (binary.getRight() instanceof ValueExpression && ((ValueExpression) binary.getRight()).getValue() == null)
+        {
+            switch (binary.getOperator())
             {
-                entity.sql.append("?");
-                entity.values.add(value.getValue());
-            }
-            else
-            {
-                entity.sql.append("null");
+                case EQ:
+                    entity.sql.append("is");
+                    break;
+                case NE:
+                    entity.sql.append("is not");
+                    break;
             }
         }
+        else
+        {
+            entity.sql.append(operatorToString(binary.getOperator()));
+        }
+        entity.sql.append(" ");
+        if (binary.getOperator() == Operator.Like || binary.getOperator() == Operator.StartLike || binary.getOperator() == Operator.EndLike)
+        {
+            var value = (ValueExpression) binary.getRight();
+            entity.sql.append("?");
+            switch (binary.getOperator())
+            {
+                case Like:
+                    entity.values.add("%" + value.getValue() + "%");
+                    break;
+                case StartLike:
+                    entity.values.add(value.getValue() + "%");
+                    break;
+                case EndLike:
+                    entity.values.add("%" + value.getValue());
+                    break;
+            }
+            entity.values.add(value.getValue());
+        }
+        else if (binary.getOperator() == Operator.IN)
+        {
+            var value = (ValueExpression) binary.getRight();
+            if (value.getValue() instanceof Iterable)
+            {
+                var it = ((Iterable<?>) value.getValue()).iterator();
+                entity.sql.append("(");
+                while (it.hasNext())
+                {
+                    entity.sql.append("?").append(",");
+                    entity.values.add(it.next());
+                }
+                entity.sql.deleteCharAt(entity.sql.length() - 1).append(")");
+            }
+        }
+        else
+        {
+            doResolve(entity, binary.getRight(), queryClass);
+        }
+        if (entity.sql.charAt(entity.sql.length() - 1) != ' ') entity.sql.append(" ");
+    }
+
+    private static void doResolveParensExpression(ParensExpression parens, Entity entity, List<Class<?>> queryClass)
+    {
+        entity.sql.append("(");
+        doResolve(entity, parens.getExpression(), queryClass);
+        entity.sql.deleteCharAt(entity.sql.length() - 1).append(")").append(" ");
     }
 
     private static void doResolveDbFuncExpression(DbFuncExpression dbFuncExpression, Entity entity, List<Class<?>> queryClass)
@@ -463,14 +515,16 @@ public class Resolve
         entity.sql.append(" ");
     }
 
-    private static void limit(Entity entity, Limit limit)
+    private static void take(Entity entity, Take take)
     {
-        if (limit.getRows() >= 0)
-        {
-            entity.sql.append("limit").append(" ");
-            if (limit.getOffset() >= 0) entity.sql.append(limit.getOffset()).append(",");
-            entity.sql.append(limit.getRows()).append(" ");
-        }
+        entity.sql.append("limit").append(" ");
+        entity.sql.append(take.getCount()).append(" ");
+    }
+
+    private static void skip(Entity entity, Skip skip)
+    {
+        entity.sql.append("offset").append(" ");
+        entity.sql.append(skip.getCount()).append(" ");
     }
 
     private static void orderBy(Entity entity, OrderBy orderBy, List<Class<?>> queryClass)
@@ -537,6 +591,8 @@ public class Resolve
                 return "/";
             case MOD:
                 return "%";
+            case IN:
+                return "in";
             default:
                 throw new RuntimeException("未知运算符");
         }

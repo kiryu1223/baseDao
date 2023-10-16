@@ -38,7 +38,7 @@ public class Query4<T1, T2, T3, T4> extends Statement4<T1, T2, T3, T4>
         return this;
     }
 
-    public <R> QueryResult<R> select(Func0000<T1, T2, T3, T4,R> func)
+    public <R> QueryResult<R> select(Func0000<T1, T2, T3, T4, R> func)
     {
         throw new NoWayException();
     }
@@ -69,21 +69,32 @@ public class Query4<T1, T2, T3, T4> extends Statement4<T1, T2, T3, T4>
         throw new NoWayException();
     }
 
+    public <R> Query4<T1, T2, T3, T4> descOrderBy(Func0000<T1, T2, T3, T4, R> func)
+    {
+        throw new NoWayException();
+    }
+
     public Query4<T1, T2, T3, T4> orderBy(DbRefExpression dbRefExpression)
     {
-        bases.add(new OrderBy(dbRefExpression));
+        bases.add(new OrderBy(dbRefExpression, false));
         return this;
     }
 
-    public Query4<T1, T2, T3, T4> limit(int offset, int rows)
+    public Query4<T1, T2, T3, T4> descOrderBy(DbRefExpression dbRefExpression)
     {
-        bases.add(new Limit(offset, rows));
+        bases.add(new OrderBy(dbRefExpression, true));
         return this;
     }
 
-    public Query4<T1, T2, T3, T4> limit(int rows)
+    public Query4<T1, T2, T3, T4> take(int count)
     {
-        bases.add(new Limit(rows));
+        bases.add(new Take(count));
+        return this;
+    }
+
+    public Query4<T1, T2, T3, T4> skip(int count)
+    {
+        bases.add(new Skip(count));
         return this;
     }
 

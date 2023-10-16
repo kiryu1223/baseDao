@@ -33,6 +33,10 @@ public interface IExpression
     {
         return new DbFuncExpression(funcType,expression);
     }
+    public static ParensExpression parens(IExpression expression)
+    {
+        return new ParensExpression(expression);
+    }
     enum Type
     {
         Binary,
@@ -42,5 +46,6 @@ public interface IExpression
         New,
         Mapping,
         DbFunc,
+        Parens,
     }
 }

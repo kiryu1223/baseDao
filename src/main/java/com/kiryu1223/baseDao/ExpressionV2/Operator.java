@@ -25,5 +25,6 @@ public enum Operator
     MUL,
     DIV,
     MOD,
+    IN,
     ;
 }
