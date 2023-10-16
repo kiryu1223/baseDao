@@ -108,3 +108,44 @@ baseDao.query(user.class)
 ```java
  select a.id,a.name from user as a
 ```
+
+3.`where`
+
+**查询条件，可以与数据库相关也可以无关（理论上什么都可以写）**
+
+```java
+baseDao.query(user.class)
+        .where(a->a.getName().contains("kiryu"));
+```
+等同于
+```sql
+select a.* from user as a where a.id like "%kiryu%"
+```
+
+4.`innerJoin`,`leftJoin`,`rightJoin`,`fullJoin`
+
+**选择连表**
+
+```java
+baseDao.query(user.class)
+        .leftJoin(book.class)
+        .select((a,b)->b);
+```
+等同于
+```sql
+select b.* from user as a leftjoin book as b
+```
+
+4.`on`
+
+**连表时的on条件**
+
+```java
+baseDao.query(user.class)
+        .leftJoin(book.class).on((a,b)->a.getId==b.getId)
+        .select((a,b)->b);
+```
+等同于
+```sql
+select b.* from user as a leftjoin book as b on a.id = b.id
+```
