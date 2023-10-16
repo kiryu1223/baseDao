@@ -62,7 +62,24 @@ class HelloDockerApplicationTests
 
 ## 查询(query)
 
-1.`query(arg)`
+>query中的sql拼接顺序为链式调用的顺序，以select为结尾，比如
+```java
+baseDao.query(user.class)
+       .leftJoin(book.class).on((a,b) -> a.getId == b.getId)
+       .where((a,b) -> a.getCode == 1669)
+       .orderBy((a,b) -> b.getId)
+       .take(50)
+       .select((a,b)-> (MyType) new MyType(){{
+                setCode(a.getCode);
+                setName(b.getName);
+        }});
+```
+>会变成
+```sql
+select a.code,b.name from user as a leftjoin book as b on a.id = b.id where a.code = 1669 order by b.id limit 50 
+```
+
+1.`query`
 
 **返回查询pojo类所对应的表的行为，基本上等同于mybatis返回一个sqlsession**
 
@@ -74,7 +91,7 @@ baseDao.query(user.class);
 select a.* from user as a
 ```
 
-2.`select(arg)`
+2.`select`
 
 **设置select选择的数据库字段与java返回类型，可以选择三种返回方式**
 
@@ -142,7 +159,7 @@ select b.* from user as a leftjoin book as b
 
 ```java
 baseDao.query(user.class)
-        .leftJoin(book.class).on((a,b)->a.getId==b.getId)
+        .leftJoin(book.class).on((a,b) -> a.getId == b.getId)
         .select((a,b)->b);
 ```
 等同于
@@ -189,7 +206,7 @@ ifelse根据的第一个参数来决定时第二个参数还是第三个参数�
 
 **返回List结果集**
 
->默认返回ArrayList
+>默认为ArrayList
 
 ```java
 List<User> res = baseDao.query(User.class).toList();
@@ -202,11 +219,25 @@ List<Integer> res = baseDao.query(User.class).select(a->a.getId).toList();
 //select a.id from user as a
 
 List<MyType> res = baseDao.query(User.class)
-                            .where(a->a.getId == 5)
-                            .select(a-> (MyType) new MyType(){{
+                            .where(a -> a.getId == 5)
+                            .select(a -> (MyType) new MyType(){{
                                     setId(a.getId);
                                     setName(a.getName);
-                            }});
+                            }})
+                            .toList();
 //select a.id,a.name from user as a where a.id = 5
 ```
 
+9.`toMap`
+
+**返回Map结果集**
+
+>默认为HashMap
+
+```java
+Map<Integer,User> res = baseDao.query(User.class).toMap(k -> k.getId); //参数为一个表达式时，对返回的集合进行遍历获取MapKey
+//select a.* from user as a
+
+Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId,v -> v.getName); //参数为两个个表达式时，对返回的集合进行遍历同时获取MapKey和MapValue
+//select a.* from user as a
+```
