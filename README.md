@@ -78,8 +78,8 @@ baseDao.query(user.class)
 ```sql
 select a.code,b.name from user as a leftjoin book as b on a.id = b.id where a.code = 1669 order by b.id limit 50 
 ```
-
-1. `query`
+-----
+1.`query`
 
 **返回查询pojo类所对应的表的行为，基本上等同于mybatis返回一个sqlsession**
 
@@ -90,8 +90,8 @@ baseDao.query(user.class);
 ``` sql
 select a.* from user as a
 ```
-
-2. `select`
+-----
+2.`select`
 
 **设置select选择的数据库字段与java返回类型，可以选择三种返回方式**
 
@@ -125,8 +125,8 @@ baseDao.query(user.class)
 ```java
  select a.id,a.name from user as a
 ```
-
-3. `where`
+-----
+3.`where`
 
 **查询条件，可以与数据库相关也可以无关（理论上什么都可以写）**
 
@@ -138,8 +138,8 @@ baseDao.query(user.class)
 ```sql
 select a.* from user as a where a.id like "%kiryu%"
 ```
-
-4. `innerJoin`,`leftJoin`,`rightJoin`,`fullJoin`
+-----
+4.`innerJoin`,`leftJoin`,`rightJoin`,`fullJoin`
 
 **选择连表**
 
@@ -152,8 +152,8 @@ baseDao.query(user.class)
 ```sql
 select b.* from user as a leftjoin book as b
 ```
-
-4. `on`
+-----
+5.`on`
 
 **连表时的on条件**
 
@@ -166,8 +166,8 @@ baseDao.query(user.class)
 ```sql
 select b.* from user as a leftjoin book as b on a.id = b.id
 ```
-
-5. `orderBy`,`descOrderBy`
+-----
+6.`orderBy`,`descOrderBy`
 
 **根据选择的字段在数据库排序**
 
@@ -179,8 +179,8 @@ baseDao.query(user.class)
 ```sql
 select a.* from user as a order by a.id
 ```
-
-6. `take`,`skip`
+-----
+7.`take`,`skip`
 
 **获取xx跳过xx，等同于mysql中的limit和offset**
 
@@ -193,8 +193,8 @@ baseDao.query(user.class)
 ```sql
 select a.* from user as a limit 3 offset 1
 ```
-
-7. `If`,`IfElse`
+-----
+8.`If`,`IfElse`
 
 **内置的条件动态sql**
 
@@ -202,7 +202,8 @@ if的第一个参数为true时，if的第二个参数将参与sql生成
 
 ifelse根据的第一个参数来决定时第二个参数还是第三个参数将参与sql生成
 
-8. `toList`
+-----
+9.`toList`
 
 **返回List结果集**
 
@@ -227,8 +228,8 @@ List<MyType> res = baseDao.query(User.class)
                             .toList();
 //select a.id,a.name from user as a where a.id = 5
 ```
-
-9. `toMap`
+-----
+10.`toMap`
 
 **返回Map结果集**
 
@@ -241,7 +242,6 @@ Map<Integer,User> res = baseDao.query(User.class).toMap(k -> k.getId); //参数�
 Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId,v -> v.getName); //参数为两个个表达式时，对返回的集合进行遍历同时获取MapKey和MapValue
 //select a.* from user as a
 ```
-
 ## 新增(save)
 
 1.`save(obj)`
