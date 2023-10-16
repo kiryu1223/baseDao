@@ -642,6 +642,7 @@ public class LambdaResolveProcessor extends AbstractProcessor
             else if (fieldAccess.getExpression() instanceof JCTree.JCFieldAccess)
             {
                 //todo
+                //todo
             }
         }
         return null;
