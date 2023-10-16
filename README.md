@@ -62,30 +62,49 @@ class HelloDockerApplicationTests
 
 ## 查询(query)
 
-1.`query(table.class)`
+1.`query(arg)`
 
-返回查询pojo类所对应的表的行为，基本上等同于mybatis返回一个sqlsession
+**返回查询pojo类所对应的表的行为，基本上等同于mybatis返回一个sqlsession**
 
->baseDao.query(user.class) 等同于 select a.* from user as a
+```java
+baseDao.query(user.class);
+```
+等同于 
+``` sql
+select a.* from user as a
+```
 
 2.`select(arg)`
 
-设置select选择的数据库字段与java返回类型，可以选择三种返回方式
+**设置select选择的数据库字段与java返回类型，可以选择三种返回方式**
 
-直接返回查询的pojo类
->baseDao.query(user.class)
->.select(a->a)
->等同于 select a.* from user as a
+- 直接返回查询的pojo类
+```java
+baseDao.query(user.class).select(a->a);
+```
+等同于 
+``` sql
+select a.* from user as a
+```
 
-返回单个数据库字段
->baseDao.query(user.class)
->.select(a->a.getId)
->等同于 select a.id from user as a
+- 返回单个数据库字段
+```java
+baseDao.query(user.class).select(a->a.getId);
+```
+等同于 
+``` sql
+select a.id from user as a
+```
 
-返回自己定义的新对象
->baseDao.query(user.class)
->.select(a->new MyType(){{
->    setId(a.getId);
->    setName(a.getName);
->}})
->等同于 select a.id,a.name from user as a
+- 返回自己定义的新对象
+```java
+baseDao.query(user.class)
+        .select(a->new MyType(){{
+            setId(a.getId);
+            setName(a.getName);
+        }});
+```
+等同于
+```java
+ select a.id,a.name from user as a
+```
