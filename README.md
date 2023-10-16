@@ -241,3 +241,20 @@ Map<Integer,User> res = baseDao.query(User.class).toMap(k -> k.getId); //参数�
 Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId,v -> v.getName); //参数为两个个表达式时，对返回的集合进行遍历同时获取MapKey和MapValue
 //select a.* from user as a
 ```
+
+## 新增(save)
+
+1，save（obj）
+对一个pojo对象的除@Id注解字段外的非null字段插入数据库
+
+2.save（objList）
+pojo对象列表的批量插入，条件同上
+
+## 更新(update)
+
+todo
+
+## 删除(delete)
+
+todo
+
