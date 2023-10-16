@@ -244,10 +244,12 @@ Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId,v -> v.ge
 
 ## 新增(save)
 
-1.save（obj）
+1.`save(obj)`
+
 对一个pojo对象的除@Id注解字段外的非null字段插入数据库
 
-2.save（objList）
+2.`save(objList)`
+
 pojo对象列表的批量插入，条件同上
 
 ## 更新(update)
