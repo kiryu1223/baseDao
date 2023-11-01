@@ -1,11 +1,12 @@
 package com.kiryu1223.baseDao.Dao;
 
+import com.kiryu1223.baseDao.Dao.Cud.Cud;
+import com.kiryu1223.baseDao.Dao.Inserter.Save;
 import com.kiryu1223.baseDao.DataBase.DataBase;
 import com.kiryu1223.baseDao.DataBase.Mysql;
 import com.kiryu1223.baseDao.DataBase.Oracle;
 import com.kiryu1223.baseDao.Dao.Deleter.Delete;
 import com.kiryu1223.baseDao.Dao.Inserter.Insert;
-import com.kiryu1223.baseDao.Dao.Inserter.InsertOne;
 import com.kiryu1223.baseDao.Dao.Queryer.Query;
 import com.kiryu1223.baseDao.Dao.Queryer.Query2;
 import com.kiryu1223.baseDao.Dao.Queryer.Query3;
@@ -70,7 +71,7 @@ public class BaseDao
 
     public <T> boolean save(T t)
     {
-        var entity = Resolve.save(new InsertOne<>(t));
+        var entity = Resolve.save(new Save<>(t));
         return dbUtil.startUpdate(entity) == 1;
     }
 
@@ -78,13 +79,10 @@ public class BaseDao
     {
         if (!ts.isEmpty())
         {
-            var batchEntity = Resolve.batchSave(ts);
-            var array = dbUtil.batchUpdate(batchEntity);
+            var entityList = Resolve.batchSave(ts);
+            var array = dbUtil.batchUpdate(entityList);
             var count = 0;
-            for (int i : array)
-            {
-                count += i;
-            }
+            for (var i : array) count += i;
             return count == ts.size();
         }
         else
@@ -92,4 +90,25 @@ public class BaseDao
             return false;
         }
     }
+
+    public Transaction startTransaction(Cud<?>... cuds)
+    {
+        var transaction = new Transaction(dbUtil);
+        for (var c : cuds)
+        {
+            transaction.push(c);
+        }
+        return transaction;
+    }
+
+    public Transaction begin(Cud<?>... cuds)
+    {
+        var transaction = new Transaction(dbUtil);
+        for (var c : cuds)
+        {
+            transaction.push(c);
+        }
+        return transaction;
+    }
+
 }

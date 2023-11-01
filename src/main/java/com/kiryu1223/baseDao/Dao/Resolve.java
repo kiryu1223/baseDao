@@ -1,14 +1,18 @@
 package com.kiryu1223.baseDao.Dao;
 
 import com.kiryu1223.baseDao.Dao.Base.*;
+import com.kiryu1223.baseDao.Dao.Factory.EntityFactory;
+import com.kiryu1223.baseDao.Dao.Inserter.Save;
+import com.kiryu1223.baseDao.JProperty.GetSetHelper;
+import com.kiryu1223.baseDao.Dao.Statement.Statement;
 import com.kiryu1223.baseDao.DataBase.DataBase;
 import com.kiryu1223.baseDao.ExpressionV2.*;
 import com.kiryu1223.baseDao.Dao.Deleter.Delete;
 import com.kiryu1223.baseDao.Dao.Inserter.Insert;
-import com.kiryu1223.baseDao.Dao.Inserter.InsertOne;
 import com.kiryu1223.baseDao.Dao.Updater.Set;
 import com.kiryu1223.baseDao.Dao.Updater.Update;
 
+import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import java.util.*;
 
@@ -21,15 +25,15 @@ public class Resolve
         Resolve.db = db;
     }
 
-    public static Entity query(boolean isDistinct, List<Base> bases, NewExpression<?> newExpression, List<Class<?>> queryClasses, List<Class<?>> joins)
+    public static Entity query(boolean isDistinct, List<Base> bases, NewExpression<?> newExpression, List<Class<?>> queryClasses, List<?> queryTarget, List<Class<?>> joins)
     {
         var entity = new Entity();
-        select(entity, isDistinct, newExpression, queryClasses, joins);
+        select(entity, isDistinct, newExpression, queryClasses, queryTarget, joins);
         for (var base : bases)
         {
             if (base instanceof Where)
             {
-                where(entity, ((Where) base).getOperatorExpression(), queryClasses);
+                where(entity, ((Where) base).getExpression(), queryTarget);
             }
             else if (base instanceof Take)
             {
@@ -41,7 +45,7 @@ public class Resolve
             }
             else if (base instanceof OrderBy)
             {
-                orderBy(entity, (OrderBy) base, queryClasses);
+                orderBy(entity, (OrderBy) base, queryTarget);
             }
             else if (base instanceof Join)
             {
@@ -49,46 +53,63 @@ public class Resolve
             }
             else if (base instanceof On)
             {
-                on(entity, ((On) base).getOperatorExpression(), queryClasses);
+                on(entity, ((On) base).getOperatorExpression(), queryTarget);
             }
         }
         return entity;
     }
 
-    public static Entity insert(Insert<?> insert)
+    public static Entity cud(Statement<?> statement)
     {
-        var entity = new Entity();
-        for (var base : insert.getBases())
+        if (statement instanceof Insert)
         {
-            if (base instanceof InsertOne)
+            return insert(statement);
+        }
+        else if (statement instanceof Delete)
+        {
+            return delete(statement);
+        }
+        else if (statement instanceof Update)
+        {
+            return update(statement);
+        }
+        return new Entity();
+    }
+
+    private static Entity insert(Statement<?> statement)
+    {
+        var entity = new Entity();
+        for (var base : statement.getBases())
+        {
+            if (base instanceof SetData)
             {
-                insertOne(entity, (InsertOne<?>) base);
+                setData(entity, (SetData) base, statement.getQueryClasses().get(0));
             }
         }
         return entity;
     }
 
-    public static Entity delete(Delete<?> delete)
+    private static Entity delete(Statement<?> statement)
     {
         var entity = new Entity();
-        entity.sql.append("delete").append(" ").append(indexMapping(0))
+        entity.append("delete").append(" ").append(indexMapping(0))
                 .append(".*").append(" ").append("from").append(" ")
-                .append(Cache.getTableName(delete.getC1())).append(" ")
+                .append(Cache.getTableName(statement.getQueryClasses().get(0))).append(" ")
                 .append("as").append(" ").append(indexMapping(0)).append(" ");
-        for (var base : delete.getBases())
+        for (var base : statement.getBases())
         {
             if (base instanceof Where)
             {
-                where(entity, ((Where) base).getOperatorExpression(), delete.getQueryClasses());
+                where(entity, ((Where) base).getExpression(), statement.getQueryTargets());
             }
         }
         return entity;
     }
 
-    public static Entity update(Update<?> update)
+    private static Entity update(Statement<?> statement)
     {
         var entity = new Entity();
-        for (var base : update.getBases())
+        for (var base : statement.getBases())
         {
             if (base instanceof Set)
             {
@@ -96,83 +117,89 @@ public class Resolve
             }
             else if (base instanceof Where)
             {
-                where(entity, ((Where) base).getOperatorExpression(), update.getQueryClasses());
+                where(entity, ((Where) base).getExpression(), statement.getQueryTargets());
             }
         }
         return entity;
     }
 
-    public static Entity save(InsertOne<?> save)
+    public static <T> List<Entity> batchSave(List<T> ts)
     {
-        var entity = new Entity();
-        insertOne(entity, save);
-        return entity;
-    }
-
-    public static <T> BatchEntity batchSave(List<T> ts)
-    {
-        var batchEntity = new BatchEntity();
+        List<Entity> entityList = new ArrayList<>(ts.size());
         var type = ts.get(0).getClass();
-        batchEntity.sql.append("insert into ").append(Cache.getTableName(type)).append("(");
+        var tableName = Cache.getTableName(type);
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(type);
         var fields = Cache.getTypeFields(type);
-        int count = 0;
-        for (var field : fields)
-        {
-            field.setAccessible(true);
-            if (field.isAnnotationPresent(Id.class))
-            {
-                continue;
-            }
-            try
-            {
-                var o = field.get(type);
-                if (o != null)
-                {
-                    batchEntity.sql.append(map.get(field.getName())).append(",");
-                    count++;
-                }
-            }
-            catch (IllegalAccessException e)
-            {
-                throw new RuntimeException(e);
-            }
-        }
-        if (count > 0) batchEntity.sql.deleteCharAt(batchEntity.sql.length() - 1);
-        batchEntity.sql.append(")").append(" ").append("values").append("(");
-        for (int i = 0; i < count; i++)
-        {
-            batchEntity.sql.append("?").append(",");
-        }
-        if (count > 0) batchEntity.sql.deleteCharAt(batchEntity.sql.length() - 1);
-        batchEntity.sql.append(")").append(" ");
         for (T t : ts)
         {
-            List<Object> values = new ArrayList<>();
-            for (var field : t.getClass().getDeclaredFields())
+            var entity = EntityFactory.get();
+            entity.append("insert into ").append(tableName).append(" ")
+                    .append("set").append(" ");
+            for (var field : fields)
             {
-                field.setAccessible(true);
                 if (field.isAnnotationPresent(Id.class))
                 {
-                    continue;
+                    switch (field.getAnnotation(GeneratedValue.class).strategy())
+                    {
+                        case IDENTITY:
+                            continue;
+                        case TABLE:
+                        case SEQUENCE:
+                        case AUTO:
+                    }
                 }
                 try
                 {
+                    entity.append(map.get(field.getName())).append(" = ");
                     var o = field.get(type);
                     if (o != null)
                     {
-                        values.add(o);
-                        count++;
+                        entity.pushValue(o);
                     }
+                    else
+                    {
+                        entity.append("null");
+                    }
+                    entity.append(",");
                 }
                 catch (IllegalAccessException e)
                 {
                     throw new RuntimeException(e);
                 }
             }
-            batchEntity.values.add(values);
+            entity.deleteLast();
+            entityList.add(entity);
         }
-        return batchEntity;
+        return entityList;
+    }
+
+    private static void setData(Entity entity, SetData setData, Class<?> target)
+    {
+        var data = setData.getMappingExpressions().getExpressions();
+        if (!data.isEmpty())
+        {
+            entity.append("insert into ").append(Cache.getTableName(target)).append(" set ");
+            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target);
+            for (var expression : data)
+            {
+                if (expression.getValue() instanceof ValueExpression<?>)
+                {
+                    var value = (ValueExpression<?>) expression.getValue();
+                    entity.append(map.get(expression.getSource())).append(" = ");
+                    if (value.getValue() != null)
+                    {
+                        entity.append("?");
+                        entity.pushValue(value.getValue());
+                    }
+                    else
+                    {
+                        entity.append("null");
+                    }
+                }
+                entity.append(",");
+            }
+            entity.deleteLast().append(" ");
+        }
     }
 
     private static void join(Entity entity, Join join, List<Class<?>> queryClass)
@@ -180,291 +207,271 @@ public class Resolve
         switch (join.getJoinType())
         {
             case Inner:
-                entity.sql.append("inner join ");
+                entity.append("inner join ");
                 break;
             case Left:
-                entity.sql.append("left join ");
+                entity.append("left join ");
                 break;
             case Right:
-                entity.sql.append("right join ");
+                entity.append("right join ");
                 break;
             case Full:
-                entity.sql.append("full join ");
+                entity.append("full join ");
                 break;
         }
-        entity.sql.append(Cache.getTableName(join.getJoinClass()))
+        entity.append(Cache.getTableName(join.getJoinClass()))
                 .append(" ").append("as").append(" ")
                 .append(indexMapping(queryClass.indexOf(join.getJoinClass()))).append(" ");
     }
 
-    private static void select(Entity entity, boolean isDistinct, NewExpression<?> newExpression, List<Class<?>> queryClass, List<Class<?>> joinClass)
+    private static void select(Entity entity, boolean isDistinct, NewExpression<?> newExpression, List<Class<?>> queryClass, List<?> queryTarget, List<Class<?>> joinClass)
     {
-        entity.sql.append("select").append(" ");
-        if (isDistinct) entity.sql.append("distinct").append(" ");
+        entity.append("select").append(" ");
+        if (isDistinct) entity.append("distinct").append(" ");
         if (!newExpression.getExpressions().isEmpty())
         {
             for (var expression : newExpression.getExpressions())
             {
-                doResolve(entity, expression, queryClass);
-                entity.sql.append(",");
+                doResolve(entity, expression, queryTarget);
+                entity.append(",");
             }
-            entity.sql.deleteCharAt(entity.sql.length() - 1);
+            entity.deleteLast();
         }
         else
         {
-            entity.sql.append(indexMapping(queryClass.indexOf(newExpression.getTarget()))).append(".").append("*");
+            entity.append(indexMapping(queryClass.indexOf(newExpression.getTarget()))).append(".").append("*");
         }
-        entity.sql.append(" ");
-        entity.sql.append("from").append(" ");
+        entity.append(" ");
+        entity.append("from").append(" ");
         for (var c : queryClass)
         {
             if (joinClass == null || !joinClass.contains(c))
             {
-                entity.sql.append(Cache.getTableName(c)).append(" ").append("as").append(" ")
+                entity.append(Cache.getTableName(c)).append(" ").append("as").append(" ")
                         .append(indexMapping(queryClass.indexOf(c))).append(",");
             }
         }
-        entity.sql.deleteCharAt(entity.sql.length() - 1).append(" ");
+        entity.deleteLast().append(" ");
     }
 
-    private static void doResolve(Entity entity, IExpression expression, List<Class<?>> queryClass)
+    private static void doResolve(Entity entity, IExpression expression, List<?> queryTarget)
     {
         if (expression instanceof MappingExpression)
         {
-            doResolveMappingExpression((MappingExpression) expression, entity, queryClass);
-        }
-        else if (expression instanceof DbRefExpression)
-        {
-            doResolveDbRefExpression((DbRefExpression) expression, entity, queryClass);
-        }
-        else if (expression instanceof DbFuncExpression)
-        {
-            doResolveDbFuncExpression((DbFuncExpression) expression, entity, queryClass);
+            doResolveMappingExpression((MappingExpression) expression, entity, queryTarget);
         }
         else if (expression instanceof BinaryExpression)
         {
-            doResolveBinaryExpression((BinaryExpression) expression, entity, queryClass);
+            doResolveBinaryExpression((BinaryExpression) expression, entity, queryTarget);
         }
         else if (expression instanceof UnaryExpression)
         {
-            doResolveUnaryExpression((UnaryExpression) expression, entity, queryClass);
+            doResolveUnaryExpression((UnaryExpression) expression, entity, queryTarget);
         }
         else if (expression instanceof ValueExpression)
         {
-            doResolveValueExpression((ValueExpression) expression, entity, queryClass);
+            doResolveValueExpression((ValueExpression<?>) expression, entity);
         }
         else if (expression instanceof ParensExpression)
         {
-            doResolveParensExpression((ParensExpression) expression, entity, queryClass);
+            doResolveParensExpression((ParensExpression) expression, entity, queryTarget);
+        }
+        else if (expression instanceof ReferenceExpression)
+        {
+            doResolveReferenceExpression((ReferenceExpression) expression, entity, queryTarget);
+        }
+        else if (expression instanceof FieldSelectExpression)
+        {
+            doResolveFieldSelectExpression((FieldSelectExpression) expression, entity, queryTarget);
+        }
+        else if (expression instanceof MethodCallExpression)
+        {
+            doResolveMethodCallExpression((MethodCallExpression) expression, entity, queryTarget);
         }
     }
 
-    private static void doResolveMappingExpression(MappingExpression mapping, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveReferenceExpression(ReferenceExpression reference, Entity entity, List<?> queryTarget)
     {
-        doResolve(entity, mapping.getValue(), queryClass);
+        var ref = reference.getReference();
+        if (queryTarget.contains(ref))
+        {
+            var index = queryTarget.indexOf(ref);
+            entity.append(indexMapping(index));
+        }
+        else
+        {
+            throw new RuntimeException("doResolveReferenceExpression() " + reference);
+        }
     }
 
-    private static void doResolveDbRefExpression(DbRefExpression dbRef, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveFieldSelectExpression(FieldSelectExpression fieldSelect, Entity entity, List<?> queryTarget)
     {
-        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(queryClass.get(dbRef.getIndex()));
-        entity.sql.append(indexMapping(dbRef.getIndex())).append(".").append(map.get(dbRef.getRef()));
+        var reference = fieldSelect.getSource().getReference();
+        if (queryTarget.contains(reference))
+        {
+            doResolve(entity, fieldSelect.getSelector(), queryTarget);
+            entity.append(".");
+            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
+            entity.append(map.get(fieldSelect.getSelectedField()));
+        }
+        else
+        {
+            entity.append("?").append(" ");
+            var val = fieldSelect.getValue();
+            entity.values.add(val);
+        }
     }
 
-    private static void doResolveUnaryExpression(UnaryExpression unary, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveMethodCallExpression(MethodCallExpression methodCall, Entity entity, List<?> queryTarget)
+    {
+        if (methodCall.getSelector() == null)
+        {
+            for (var param : methodCall.getParams())
+            {
+                doResolve(entity, param, queryTarget);
+            }
+        }
+        else
+        {
+            var reference = methodCall.getSource().getReference();
+            if (queryTarget.contains(reference))
+            {
+                switch (methodCall.getSelectedMethod())
+                {
+                    case "equals":
+                        doResolve(entity, methodCall.getSelector(), queryTarget);
+                        entity.append("=").append(" ");
+                        doResolve(entity, methodCall.getParams().get(0), queryTarget);
+                        break;
+                    case "contains":
+                        break;
+                    default:
+                        doResolve(entity, methodCall.getSelector(), queryTarget);
+                        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
+                        entity.append(".").append(map.get(GetSetHelper.getterToFieldName(
+                                methodCall.getSelectedMethod(),
+                                reference.getClass())
+                        ));
+                        break;
+                }
+            }
+            else
+            {
+                entity.append("?").append(" ");
+                var val = methodCall.getValue();
+                entity.values.add(val);
+            }
+        }
+    }
+
+    private static void doResolveMappingExpression(MappingExpression mapping, Entity entity, List<?> queryTarget)
+    {
+        doResolve(entity, mapping.getValue(), queryTarget);
+    }
+
+    private static void doResolveUnaryExpression(UnaryExpression unary, Entity entity, List<?> queryTarget)
     {
         if (unary.getOperator() == Operator.NOT)
         {
             if (unary.getExpression() instanceof ParensExpression)
             {
-                entity.sql.append("!");
-                doResolve(entity, unary.getExpression(), queryClass);
+                entity.append("!");
+                doResolve(entity, unary.getExpression(), queryTarget);
             }
             else
             {
-                entity.sql.append("!(");
-                doResolve(entity, unary.getExpression(), queryClass);
-                entity.sql.deleteCharAt(entity.sql.length() - 1).append(")").append(" ");
+                entity.append("!(");
+                doResolve(entity, unary.getExpression(), queryTarget);
+                entity.deleteLast().append(")").append(" ");
             }
         }
     }
 
-    private static void doResolveValueExpression(ValueExpression value, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveValueExpression(ValueExpression<?> value, Entity entity)
     {
         if (value.getValue() != null)
         {
-            entity.sql.append("?");
+            entity.append("?");
             entity.values.add(value.getValue());
         }
         else
         {
-            entity.sql.append("null");
+            entity.append("null");
         }
     }
 
-    private static void doResolveBinaryExpression(BinaryExpression binary, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveBinaryExpression(BinaryExpression binary, Entity entity, List<?> queryTarget)
     {
-        doResolve(entity, binary.getLeft(), queryClass);
-        if (entity.sql.charAt(entity.sql.length() - 1) != ' ') entity.sql.append(" ");
-        if (binary.getRight() instanceof ValueExpression && ((ValueExpression) binary.getRight()).getValue() == null)
+        doResolve(entity, binary.getLeft(), queryTarget);
+        entity.blank();
+        if (binary.getRight() instanceof ValueExpression && ((ValueExpression<?>) binary.getRight()).getValue() == null)
         {
             switch (binary.getOperator())
             {
                 case EQ:
-                    entity.sql.append("is");
+                    entity.append("is");
                     break;
                 case NE:
-                    entity.sql.append("is not");
+                    entity.append("is not");
                     break;
             }
         }
         else
         {
-            entity.sql.append(operatorToString(binary.getOperator()));
+            entity.append(operatorToString(binary.getOperator()));
         }
-        entity.sql.append(" ");
-        if (binary.getOperator() == Operator.Like || binary.getOperator() == Operator.StartLike || binary.getOperator() == Operator.EndLike)
-        {
-            var value = (ValueExpression) binary.getRight();
-            entity.sql.append("?");
-            switch (binary.getOperator())
-            {
-                case Like:
-                    entity.values.add("%" + value.getValue() + "%");
-                    break;
-                case StartLike:
-                    entity.values.add(value.getValue() + "%");
-                    break;
-                case EndLike:
-                    entity.values.add("%" + value.getValue());
-                    break;
-            }
-            entity.values.add(value.getValue());
-        }
-        else if (binary.getOperator() == Operator.IN)
-        {
-            var value = (ValueExpression) binary.getRight();
-            if (value.getValue() instanceof Iterable)
-            {
-                var it = ((Iterable<?>) value.getValue()).iterator();
-                entity.sql.append("(");
-                while (it.hasNext())
-                {
-                    entity.sql.append("?").append(",");
-                    entity.values.add(it.next());
-                }
-                entity.sql.deleteCharAt(entity.sql.length() - 1).append(")");
-            }
-        }
-        else
-        {
-            doResolve(entity, binary.getRight(), queryClass);
-        }
-        if (entity.sql.charAt(entity.sql.length() - 1) != ' ') entity.sql.append(" ");
+        entity.blank();
+        doResolve(entity, binary.getRight(), queryTarget);
+        entity.blank();
     }
 
-    private static void doResolveParensExpression(ParensExpression parens, Entity entity, List<Class<?>> queryClass)
+    private static void doResolveParensExpression(ParensExpression parens, Entity entity, List<?> queryTarget)
     {
-        entity.sql.append("(");
-        doResolve(entity, parens.getExpression(), queryClass);
-        entity.sql.deleteCharAt(entity.sql.length() - 1).append(")").append(" ");
+        entity.append("(");
+        doResolve(entity, parens.getExpression(), queryTarget);
+        entity.deleteLast().append(")").append(" ");
     }
 
-    private static void doResolveDbFuncExpression(DbFuncExpression dbFuncExpression, Entity entity, List<Class<?>> queryClass)
+    private static void where(Entity entity, IExpression expression, List<?> queryTarget)
     {
-        var expression = dbFuncExpression.getExpression();
-        if (expression instanceof DbRefExpression)
-        {
-            var dbRef = (DbRefExpression) expression;
-            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(queryClass.get(dbRef.getIndex()));
-            switch (dbFuncExpression.getDbFuncType())
-            {
-                case Count:
-                    if (dbRef.getRef().equals(""))
-                    {
-                        entity.sql.append("count(*)");
-                    }
-                    else
-                    {
-                        entity.sql.append("count(").append(indexMapping(dbRef.getIndex())).append(".")
-                                .append(map.get(dbRef.getRef())).append(")");
-                    }
-                    break;
-                case Sum:
-                    if (dbRef.getRef().equals(""))
-                    {
-                        entity.sql.append("sum(*)");
-                    }
-                    else
-                    {
-                        entity.sql.append("sum(").append(indexMapping(dbRef.getIndex())).append(".")
-                                .append(map.get(dbRef.getRef())).append(")");
-                    }
-                    break;
-            }
-        }
-        else if (expression instanceof ValueExpression)
-        {
-            var value = (ValueExpression) expression;
-            switch (dbFuncExpression.getDbFuncType())
-            {
-                case Count:
-                    entity.sql.append("count(").append(value.getValue()).append(")");
-                    break;
-                case Sum:
-                    entity.sql.append("sum(").append(value.getValue()).append(")");
-                    break;
-            }
-        }
-        else if (expression instanceof DbFuncExpression)
-        {
-            var funcExpression = (DbFuncExpression) expression;
-            switch (dbFuncExpression.getDbFuncType())
-            {
-                case Count:
-                    entity.sql.append("count(");
-                    doResolveDbFuncExpression(funcExpression, entity, queryClass);
-                    entity.sql.append(")");
-                    break;
-                case Sum:
-                    entity.sql.append("sum(");
-                    doResolveDbFuncExpression(funcExpression, entity, queryClass);
-                    entity.sql.append(")");
-                    break;
-            }
-        }
+        entity.append("where").append(" ");
+        doResolve(entity, expression, queryTarget);
     }
 
-    private static void where(Entity entity, IExpression expression, List<Class<?>> queryClass)
+    private static void on(Entity entity, IExpression expression, List<?> queryTarget)
     {
-        entity.sql.append("where").append(" ");
-        doResolve(entity, expression, queryClass);
+        entity.append("on").append(" ");
+        doResolve(entity, expression, queryTarget);
     }
 
-    private static void on(Entity entity, IExpression expression, List<Class<?>> queryClass)
+    public static Entity save(Save<?> save)
     {
-        entity.sql.append("on").append(" ");
-        doResolve(entity, expression, queryClass);
-    }
-
-    private static void insertOne(Entity entity, InsertOne<?> insertOne)
-    {
-        var target = insertOne.getTarget();
-        entity.sql.append("insert into ").append(Cache.getTableName(target.getClass())).append("(");
+        var entity = new Entity();
+        var target = save.getTarget();
+        entity.append("insert into ").append(Cache.getTableName(target.getClass()))
+                .append(" ").append("set").append(" ");
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
+        var fields = Cache.getTypeFields(target.getClass());
         int count = 0;
-        for (var field : target.getClass().getDeclaredFields())
+        for (var field : fields)
         {
-            field.setAccessible(true);
             if (field.isAnnotationPresent(Id.class))
             {
-                continue;
+                switch (field.getAnnotation(GeneratedValue.class).strategy())
+                {
+                    case IDENTITY:
+                        continue;
+                    case TABLE:
+                    case SEQUENCE:
+                    case AUTO:
+                }
             }
             try
             {
                 var o = field.get(target);
                 if (o != null)
                 {
-                    entity.sql.append(map.get(field.getName())).append(",");
+                    entity.append(map.get(field.getName())).append(" = ").append("?").append(",");
                     entity.values.add(o);
                     count++;
                 }
@@ -474,20 +481,14 @@ public class Resolve
                 throw new RuntimeException(e);
             }
         }
-        if (count > 0) entity.sql.deleteCharAt(entity.sql.length() - 1);
-        entity.sql.append(")").append(" ").append("values").append("(");
-        for (int i = 0; i < count; i++)
-        {
-            entity.sql.append("?").append(",");
-        }
-        if (count > 0) entity.sql.deleteCharAt(entity.sql.length() - 1);
-        entity.sql.append(")").append(" ");
+        if (count > 0) entity.deleteLast();
+        return entity;
     }
 
     private static void set(Entity entity, Set<?> set)
     {
         var target = set.getTarget();
-        entity.sql.append("update ").append(Cache.getTableName(target.getClass())).append(" ")
+        entity.append("update ").append(Cache.getTableName(target.getClass())).append(" ")
                 .append("as").append(" ").append(indexMapping(0)).append(" ").append("set").append(" ");
         var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
         boolean flag = false;
@@ -499,7 +500,7 @@ public class Resolve
                 var o = field.get(target);
                 if (o != null)
                 {
-                    entity.sql.append(indexMapping(0)).append(".")
+                    entity.append(indexMapping(0)).append(".")
                             .append(map.get(field.getName()))
                             .append("=").append("?").append(",");
                     entity.values.add(o);
@@ -511,43 +512,27 @@ public class Resolve
                 throw new RuntimeException(e);
             }
         }
-        if (flag) entity.sql.deleteCharAt(entity.sql.length() - 1);
-        entity.sql.append(" ");
+        if (flag) entity.deleteLast();
+        entity.append(" ");
     }
 
     private static void take(Entity entity, Take take)
     {
-        entity.sql.append("limit").append(" ");
-        entity.sql.append(take.getCount()).append(" ");
+        entity.append("limit").append(" ");
+        entity.append(take.getCount()).append(" ");
     }
 
     private static void skip(Entity entity, Skip skip)
     {
-        entity.sql.append("offset").append(" ");
-        entity.sql.append(skip.getCount()).append(" ");
+        entity.append("offset").append(" ");
+        entity.append(skip.getCount()).append(" ");
     }
 
-    private static void orderBy(Entity entity, OrderBy orderBy, List<Class<?>> queryClass)
+    private static void orderBy(Entity entity, OrderBy orderBy, List<?> queryTarget)
     {
-        var ref = orderBy.getDbRefExpression();
-        entity.sql.append("order by ").append(indexMapping(ref.getIndex()));
-        if (!ref.getRef().equals(""))
-        {
-            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(queryClass.get(ref.getIndex()));
-            entity.sql.append(".").append(map.get(ref.getRef()));
-        }
-        entity.sql.append(" ");
-    }
-
-    private static String removeGetOrSet(String methodName)
-    {
-        var name = methodName;
-        if (name.startsWith("get") || name.startsWith("set"))
-        {
-            var temp = methodName.substring(3);
-            name = temp.substring(0, 1).toLowerCase() + temp.substring(1);
-        }
-        return name;
+        var ref = orderBy.getExpression();
+        entity.append("order by ");
+        doResolve(entity, ref, queryTarget);
     }
 
     private static String indexMapping(int index)

@@ -16,21 +16,21 @@ public class QueryResult<R>
     private final DBUtil dbUtil;
     private final List<Base> bases;
     private final List<Class<?>> queryClasses;
+    private final List<?> queryTargets;
     private final List<Class<?>> joinClasses;
     private final NewExpression<R> newExpression;
-    private final boolean isDistinct;
+    private boolean isDistinct;
     private Entity entity = null;
 
-    public QueryResult(DBUtil dbUtil, boolean isDistinct, List<Base> bases, List<Class<?>> queryClasses, List<Class<?>> joinClasses, NewExpression<R> newExpression)
+    public QueryResult(DBUtil dbUtil, List<Base> bases, List<Class<?>> queryClasses, List<?> queryTargets, List<Class<?>> joinClasses, NewExpression<R> newExpression)
     {
         this.dbUtil = dbUtil;
-        this.isDistinct = isDistinct;
         this.queryClasses = queryClasses;
+        this.queryTargets = queryTargets;
         this.joinClasses = joinClasses;
-        this.newExpression = newExpression;
         this.bases = bases;
+        this.newExpression = newExpression;
     }
-
     public String toSql()
     {
         tryGetEntity();
@@ -88,6 +88,17 @@ public class QueryResult<R>
         then.invoke(map);
     }
 
+    public QueryResult<R> distinct()
+    {
+        return distinct(true);
+    }
+
+    public QueryResult<R> distinct(boolean sw)
+    {
+        isDistinct = sw;
+        return this;
+    }
+
     public boolean isDistinct()
     {
         return isDistinct;
@@ -102,7 +113,7 @@ public class QueryResult<R>
     {
         if (entity == null)
         {
-            entity = Resolve.query(isDistinct, bases, newExpression,queryClasses, joinClasses);
+            entity = Resolve.query(isDistinct, bases, newExpression, queryClasses,queryTargets, joinClasses);
         }
     }
 }

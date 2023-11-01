@@ -1,15 +1,15 @@
 package com.kiryu1223.baseDao.ExpressionV2;
 
-public class ValueExpression implements IExpression
+public class ValueExpression<T> implements IExpression
 {
-    private final Object value;
+    private final T value;
 
-    ValueExpression(Object value)
+    ValueExpression(T value)
     {
         this.value = value;
     }
 
-    public Object getValue()
+    public T getValue()
     {
         return value;
     }

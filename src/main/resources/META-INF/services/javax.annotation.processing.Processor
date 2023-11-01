@@ -1,1 +1,1 @@
-com.kiryu1223.baseDao.Resolve.LambdaResolveProcessor
+com.kiryu1223.baseDao.Resolve.DefaultExpressionProcessor

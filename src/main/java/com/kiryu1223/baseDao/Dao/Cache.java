@@ -4,9 +4,13 @@ import javax.persistence.*;
 import javax.persistence.Entity;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class Cache
 {
@@ -133,8 +137,69 @@ public class Cache
     {
         if (!TypeFieldMap.containsKey(c))
         {
-            TypeFieldMap.put(c, new ArrayList<>(Arrays.asList(c.getDeclaredFields())));
+            var fields = new ArrayList<Field>();
+            for (var a : c.getDeclaredFields())
+            {
+                a.setAccessible(true);
+                fields.add(a);
+            }
+            TypeFieldMap.put(c, fields);
         }
         return TypeFieldMap.get(c);
+    }
+
+    public static <T> void setCLassDefVal(T t)
+    {
+        getTypeFields(t.getClass()).forEach(a ->
+        {
+            try
+            {
+                if (a.getType() == Integer.class)
+                {
+                    a.set(t, 0);
+                }
+                else if (a.getType() == Byte.class)
+                {
+                    a.set(t, (byte) 0);
+                }
+                else if (a.getType() == Short.class)
+                {
+                    a.set(t, (short) 0);
+                }
+                else if (a.getType() == Long.class)
+                {
+                    a.set(t, 0L);
+                }
+                else if (a.getType() == String.class)
+                {
+                    a.set(t, " ");
+                }
+                else if (a.getType() == Character.class)
+                {
+                    a.set(t, ' ');
+                }
+                else if (a.getType() == Float.class)
+                {
+                    a.set(t, (float) 0);
+                }
+                else if (a.getType() == Double.class)
+                {
+                    a.set(t, (double) 0);
+                }
+                else if (a.getType() == BigInteger.class)
+                {
+                    a.set(t, BigDecimal.valueOf(0));
+                }
+                else
+                {
+                    a.set(t, a.getType().getConstructor().newInstance());
+                }
+            }
+            catch (IllegalAccessException | InvocationTargetException | InstantiationException |
+                   NoSuchMethodException e)
+            {
+                throw new RuntimeException(e);
+            }
+        });
     }
 }

@@ -1,14 +1,16 @@
 package com.kiryu1223.baseDao.Dao.Deleter;
 
+import com.kiryu1223.baseDao.Dao.Cud.Cud;
 import com.kiryu1223.baseDao.Dao.DBUtil;
 import com.kiryu1223.baseDao.Dao.Entity;
 import com.kiryu1223.baseDao.Dao.Func.Func1;
 import com.kiryu1223.baseDao.Dao.Resolve;
 import com.kiryu1223.baseDao.Dao.Statement.Statement;
+import com.kiryu1223.baseDao.Error.NoWayException;
 import com.kiryu1223.baseDao.ExpressionV2.OperatorExpression;
 import com.kiryu1223.baseDao.Dao.Base.Where;
 
-public class Delete<T> extends Statement<T>
+public class Delete<T> extends Cud<T>
 {
     public Delete(DBUtil dbUtil, Class<T> c1)
     {
@@ -17,7 +19,7 @@ public class Delete<T> extends Statement<T>
 
     public Delete<T> where(Func1<T> func)
     {
-        throw new RuntimeException("no way");
+        throw new NoWayException();
     }
 
     public Delete<T> where(OperatorExpression operatorExpression)
@@ -28,17 +30,17 @@ public class Delete<T> extends Statement<T>
 
     public Entity toEntity()
     {
-        return Resolve.delete(this);
+        return Resolve.cud(this);
     }
 
     public String toSql()
     {
-        return Resolve.delete(this).sql.toString();
+        return Resolve.cud(this).toString();
     }
 
     public int doDelete()
     {
-        var e = Resolve.delete(this);
+        var e = Resolve.cud(this);
         return dbUtil.startUpdate(e);
     }
 }

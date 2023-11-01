@@ -1,21 +1,21 @@
 package com.kiryu1223.baseDao.Dao.Base;
 
-import com.kiryu1223.baseDao.ExpressionV2.DbRefExpression;
+import com.kiryu1223.baseDao.ExpressionV2.IExpression;
 
 public class OrderBy extends Base
 {
-    private final DbRefExpression dbRefExpression;
+    private final IExpression expression;
     private final boolean isDesc;
 
-    public OrderBy(DbRefExpression dbRefExpression, boolean isDesc)
+    public OrderBy(IExpression expression, boolean isDesc)
     {
-        this.dbRefExpression = dbRefExpression;
+        this.expression = expression;
         this.isDesc = isDesc;
     }
 
-    public DbRefExpression getDbRefExpression()
+    public IExpression getExpression()
     {
-        return dbRefExpression;
+        return expression;
     }
 
     public boolean isDesc()

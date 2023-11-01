@@ -6,7 +6,7 @@ import com.kiryu1223.baseDao.Dao.Func.Func000;
 import com.kiryu1223.baseDao.Dao.Func.Func100;
 import com.kiryu1223.baseDao.Dao.Func.Func2;
 import com.kiryu1223.baseDao.Dao.Statement.Statement3;
-import com.kiryu1223.baseDao.ExpressionV2.DbRefExpression;
+import com.kiryu1223.baseDao.ExpressionV2.IExpression;
 import com.kiryu1223.baseDao.ExpressionV2.NewExpression;
 import com.kiryu1223.baseDao.ExpressionV2.OperatorExpression;
 import com.kiryu1223.baseDao.Error.NoWayException;
@@ -55,12 +55,12 @@ public class Query3<T1, T2, T3> extends Statement3<T1, T2, T3>
 
     public <R> QueryResult<R> select(NewExpression<R> newExpression)
     {
-        return new QueryResult<R>(dbUtil, false, bases, getQueryClasses(), joins, newExpression);
+        return new QueryResult<R>(dbUtil, bases, getQueryClasses(), getQueryTargets(), joins, newExpression);
     }
 
     public <R> QueryResult<R> selectDistinct(NewExpression<R> newExpression)
     {
-        return new QueryResult<R>(dbUtil, true, bases, getQueryClasses(),joins, newExpression);
+        return new QueryResult<R>(dbUtil,bases, getQueryClasses(), getQueryTargets(), joins, newExpression);
     }
 
     public <R> Query3<T1, T2, T3> orderBy(Func000<T1, T2, T3, R> func)
@@ -72,14 +72,14 @@ public class Query3<T1, T2, T3> extends Statement3<T1, T2, T3>
         throw new NoWayException();
     }
 
-    public Query3<T1, T2, T3> orderBy(DbRefExpression dbRefExpression)
+    public Query3<T1, T2, T3> orderBy(IExpression expression)
     {
-        bases.add(new OrderBy(dbRefExpression, false));
+        bases.add(new OrderBy(expression, false));
         return this;
     }
-    public Query3<T1, T2, T3> descOrderBy(DbRefExpression dbRefExpression)
+    public Query3<T1, T2, T3> descOrderBy(IExpression expression)
     {
-        bases.add(new OrderBy(dbRefExpression, true));
+        bases.add(new OrderBy(expression, true));
         return this;
     }
 

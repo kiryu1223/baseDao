@@ -1,20 +1,15 @@
 package com.kiryu1223.baseDao.Dao.Queryer;
 
+import com.kiryu1223.baseDao.Dao.*;
 import com.kiryu1223.baseDao.Dao.Base.*;
-import com.kiryu1223.baseDao.Dao.DBUtil;
-import com.kiryu1223.baseDao.Dao.Entity;
 import com.kiryu1223.baseDao.Dao.Func.Func0;
 import com.kiryu1223.baseDao.Dao.Func.Func1;
 import com.kiryu1223.baseDao.Dao.Func.Func2;
-import com.kiryu1223.baseDao.Dao.JoinType;
-import com.kiryu1223.baseDao.Dao.Resolve;
-import com.kiryu1223.baseDao.ExpressionV2.DbRefExpression;
-import com.kiryu1223.baseDao.ExpressionV2.IExpression;
-import com.kiryu1223.baseDao.ExpressionV2.NewExpression;
-import com.kiryu1223.baseDao.ExpressionV2.OperatorExpression;
+import com.kiryu1223.baseDao.ExpressionV2.*;
 
 import com.kiryu1223.baseDao.Error.NoWayException;
 import com.kiryu1223.baseDao.Dao.Statement.Statement;
+import com.kiryu1223.baseDao.Resolve.Expression;
 
 import java.util.List;
 import java.util.Map;
@@ -89,58 +84,50 @@ public class Query<T> extends Statement<T>
     {
         if (entity == null)
         {
-            entity = Resolve.query(false, bases, IExpression.New(c1), getQueryClasses(), null);
+            entity = Resolve.query(false, bases, IExpression.New(c1), getQueryClasses(),getQueryTargets(), null);
         }
     }
 
-    public Query<T> where(Func1<T> func)
+    public Query<T> where(@Expression Func1<T> func)
     {
         throw new NoWayException();
     }
 
-    public <R> QueryResult<R> select(Func0<T,R> func)
+    public <R> Query<T> orderBy(@Expression Func0<T, R> func)
     {
         throw new NoWayException();
     }
 
-    public <R> QueryResult<R> selectDistinct(Func0<T,R> func)
+    public <R> Query<T> descOrderBy(@Expression Func0<T, R> func)
     {
         throw new NoWayException();
     }
 
-    public Query<T> where(OperatorExpression operatorExpression)
+    public <R> QueryResult<R> select(@Expression Func0<T, R> func)
     {
-        bases.add(new Where(operatorExpression));
+        throw new NoWayException();
+    }
+
+    public Query<T> where(ExpressionFunc.E1<Void, T> e1)
+    {
+        bases.add(new Where(e1.invoke(null, t1)));
         return this;
     }
 
-    public <R> QueryResult<R> select(NewExpression<R> newExpression)
+    public <R> QueryResult<R> select(ExpressionFunc.NR1<Void, T, R> e1)
     {
-        return new QueryResult<R>(dbUtil, false, bases, getQueryClasses(), null, newExpression);
+        return new QueryResult<R>(dbUtil, bases, getQueryClasses(),getQueryTargets(), null, e1.invoke(null, t1));
     }
 
-    public <R> QueryResult<R> selectDistinct(NewExpression<R> newExpression)
+    public Query<T> orderBy(ExpressionFunc.E1<Void, T> e1)
     {
-        return new QueryResult<R>(dbUtil, true, bases, getQueryClasses(), null, newExpression);
-    }
-
-    public <R> Query<T> orderBy(Func0<T, R> func)
-    {
-        throw new NoWayException();
-    }
-    public <R> Query<T> descOrderBy(Func0<T, R> func)
-    {
-        throw new NoWayException();
-    }
-
-    public Query<T> orderBy(DbRefExpression dbRefExpression)
-    {
-        bases.add(new OrderBy(dbRefExpression, false));
+        bases.add(new OrderBy(e1.invoke(null, t1), false));
         return this;
     }
-    public Query<T> descOrderBy(DbRefExpression dbRefExpression)
+
+    public Query<T> descOrderBy(ExpressionFunc.E1<Void, T> e1)
     {
-        bases.add(new OrderBy(dbRefExpression, true));
+        bases.add(new OrderBy(e1.invoke(null, t1), true));
         return this;
     }
 
@@ -156,29 +143,9 @@ public class Query<T> extends Statement<T>
         return this;
     }
 
-    public Query<T> If(boolean flag, Func2<Query<T>> If)
-    {
-        if (flag) If.invoke(this);
-        return this;
-    }
-
-    public Query<T> IfElse(boolean flag, Func2<Query<T>> If, Func2<Query<T>> Else)
-    {
-        if (flag)
-        {
-            If.invoke(this);
-        }
-        else
-        {
-            Else.invoke(this);
-        }
-        return this;
-    }
-
     public <T2> Query2<T, T2> innerJoin(Class<T2> c)
     {
         bases.add(new Join(c, JoinType.Inner));
-
         return new Query2<>(dbUtil, bases, List.of(c), c1, c);
     }
 

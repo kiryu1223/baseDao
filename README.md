@@ -15,6 +15,7 @@ java lambda to static expressionTree to SQL
     <version>1.0.2</version>
 </dependency>
 ```
+
 # how to start
 1.添加maven依赖,并且在共享构建过程VM选项中添加
 >-Djps.track.ap.dependencies=false
@@ -65,6 +66,7 @@ class HelloDockerApplicationTests
 ## 查询(query)
 
 >query中的sql拼接顺序为链式调用的顺序，以select为结尾，比如
+
 ```java
 baseDao.query(user.class)
        .leftJoin(book.class).on((a,b) -> a.getId == b.getId)
@@ -76,9 +78,11 @@ baseDao.query(user.class)
                 setName(b.getName);
         }});
 ```
+
 >会变成
+
 ```sql
-select a.code,b.name from user as a leftjoin book as b on a.id = b.id where a.code = 1669 order by b.id limit 50 
+select a.code,b.name from user as a left join book as b on a.id = b.id where a.code = 1669 order by b.id limit 50 
 ```
 -----
 1.`query`
@@ -166,7 +170,7 @@ baseDao.query(user.class)
 ```
 等同于
 ```sql
-select b.* from user as a leftjoin book as b on a.id = b.id
+select b.* from user as a left join book as b on a.id = b.id
 ```
 -----
 6.`orderBy`,`descOrderBy`

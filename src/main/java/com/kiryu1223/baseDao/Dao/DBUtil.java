@@ -1,16 +1,23 @@
 package com.kiryu1223.baseDao.Dao;
 
+import com.kiryu1223.baseDao.Dao.Mapping.*;
 import com.kiryu1223.baseDao.ExpressionV2.*;
 import com.kiryu1223.baseDao.Dao.Func.Func0;
+
 
 import javax.sql.DataSource;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.sql.*;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DBUtil
 {
@@ -32,24 +39,52 @@ public class DBUtil
         }
     }
 
-    private void setBatchValues(PreparedStatement ps, List<List<Object>> valueList) throws SQLException
+    private List<Integer> setBatchValues(Connection conn, List<Entity> entityList) throws SQLException
     {
-        if (valueList != null)
+        Entity ee = null;
+        PreparedStatement ps = null;
+        List<Integer> ints = new ArrayList<>(entityList.size());
+        for (var entity : entityList)
         {
-            for (List<Object> list : valueList)
+            if (ee != null && ee.sql.toString().contentEquals(entity.sql))
             {
-                for (int i = 0; i < list.size(); i++)
+                for (int i = 0; i < entity.values.size(); i++)
                 {
-                    ps.setObject(i + 1, list.get(i));
+                    ps.setObject(i + 1, entity.values.get(i));
                 }
                 ps.addBatch();
             }
+            else
+            {
+                if (ps != null)
+                {
+                    var count = ps.executeBatch();
+                    for (int i : count)
+                    {
+                        ints.add(i);
+                    }
+                }
+                ps = conn.prepareStatement(entity.sql.toString());
+                for (int i = 0; i < entity.values.size(); i++)
+                {
+                    ps.setObject(i + 1, entity.values.get(i));
+                }
+                ps.addBatch();
+                ee = entity;
+            }
         }
+        return ints;
     }
 
-    private static boolean isJavaClass(Class<?> clz)
+    private static final Map<Class<?>, Boolean> javaClassMap = new ConcurrentHashMap<>();
+
+    private static boolean isJavaClass(Class<?> c)
     {
-        return clz != null && clz.getClassLoader() == null;
+        if (!javaClassMap.containsKey(c))
+        {
+            javaClassMap.put(c, c.getClassLoader() == null);
+        }
+        return javaClassMap.get(c);
     }
 
     private <R> List<R> getResultList(ResultSet rs, NewExpression<R> newExpression) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
@@ -57,73 +92,89 @@ public class DBUtil
         var md = rs.getMetaData();
         var resultType = newExpression.getTarget();
         List<R> result = new ArrayList<>();
-        if (isJavaClass(resultType))
+        if (newExpression.getExpressions().isEmpty())
         {
+            var map = Cache.getDbNameToFieldMapping(resultType);
             while (rs.next())
             {
-                var o = rs.getObject(1, resultType);
-                if (o != null)
+                var r = resultType.getConstructor().newInstance();
+                for (int i = 1; i <= md.getColumnCount(); i++)
                 {
-                    result.add(o);
+                    var rName = md.getColumnLabel(i);
+                    var field = map.get(rName);
+                    var o = rs.getObject(rName, field.getType());
+                    if (o != null)
+                    {
+                        field.set(r, o);
+                    }
                 }
+                result.add(r);
             }
         }
         else
         {
-            if (newExpression.getExpressions().isEmpty())
+            List<BaseMapping> baseMappings = new ArrayList<>();
+            doResolve(newExpression, baseMappings);
+            var constructor = resultType.getConstructor();
+            while (rs.next())
             {
-                var map = Cache.getDbNameToFieldMapping(resultType);
-                while (rs.next())
+                var r = constructor.newInstance();
+                int[] offset = {1};
+                for (var iMapping : baseMappings)
                 {
-                    var r = resultType.getConstructor().newInstance();
-                    for (int i = 1; i <= md.getColumnCount(); i++)
-                    {
-                        var rName = md.getColumnLabel(i);
-                        var field = map.get(rName);
-                        var o = rs.getObject(rName, field.getType());
-                        if (o != null)
-                        {
-                            //if (o.getClass().equals(LocalDateTime.class)) o = Timestamp.valueOf((LocalDateTime) o);
-                            field.set(r, o);
-                        }
-                    }
-                    result.add(r);
+                    iMapping.setParent(r);
+                    DMain(iMapping, offset, rs);
                 }
-            }
-            else
-            {
-                List<Method> methods = new ArrayList<>();
-                Map<Method, Object> pairs = new HashMap<>();
-                var methodMap = Cache.getMethodNameToMethodMapping(resultType);
-                for (var expression : newExpression.getExpressions())
-                {
-                    doResolve(expression, methodMap, pairs, methods);
-                }
-                var constructor = resultType.getConstructor();
-
-                while (rs.next())
-                {
-                    var r = constructor.newInstance();
-                    for (int i = 1; i <= md.getColumnCount(); i++)
-                    {
-                        var setter = methods.get(i - 1);
-                        var o = rs.getObject(i, setter.getParameterTypes()[0]);
-                        if (o != null)
-                        {
-                            setter.invoke(r, o);
-                        }
-                    }
-                    for (var entry : pairs.entrySet())
-                    {
-                        var k = entry.getKey();
-                        var v = entry.getValue();
-                        k.invoke(r, v);
-                    }
-                    result.add(r);
-                }
+                result.add(r);
             }
         }
         return result;
+    }
+
+    private void DMain(BaseMapping iMapping, int[] offset, ResultSet rs) throws SQLException, InvocationTargetException, IllegalAccessException, NoSuchMethodException, InstantiationException
+    {
+        if (iMapping instanceof SetterMapping)
+        {
+            var setterMapping = (SetterMapping) iMapping;
+            var setter = setterMapping.getMethod();
+            var o = rs.getObject(offset[0]++, setter.getParameterTypes()[0]);
+            if (o != null)
+            {
+                setter.invoke(setterMapping.getParent(), o);
+            }
+        }
+        else if (iMapping instanceof RefTableMapping)
+        {
+            var refTableMapping = (RefTableMapping) iMapping;
+            var target = refTableMapping.getTarget();
+            var map = Cache.getDbNameToFieldMapping(target);
+            var temp = target.getConstructor().newInstance();
+            var metaData = rs.getMetaData();
+            for (int i = 0; i < map.size(); i++)
+            {
+                var name = metaData.getColumnLabel(offset[0]);
+                var field = map.get(name);
+                var o = rs.getObject(offset[0]++, field.getType());
+                if (o != null)
+                {
+                    field.set(temp, o);
+                }
+            }
+            var setter = refTableMapping.getMethod();
+            setter.invoke(refTableMapping.getParent(), temp);
+        }
+        else if (iMapping instanceof NewClassMapping)
+        {
+            var newClassMapping = (NewClassMapping) iMapping;
+            var nt = newClassMapping.getTarget().getConstructor().newInstance();
+            for (var mapping : newClassMapping.getMappings())
+            {
+                mapping.setParent(nt);
+                DMain(mapping, offset, rs);
+            }
+            var setter = newClassMapping.getMethod();
+            setter.invoke(newClassMapping.getParent(), nt);
+        }
     }
 
     private <Key, R> Map<Key, R> getResultMap(ResultSet rs, NewExpression<R> newExpression, Func0<R, Key> getKey) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
@@ -193,7 +244,6 @@ public class DBUtil
         ResultSet rs = null;
         try
         {
-            System.out.println(entity);
             conn = dataSource.getConnection();
             ps = conn.prepareStatement(entity.sql.toString());
             setValues(ps, entity.values);
@@ -227,7 +277,6 @@ public class DBUtil
         ResultSet rs = null;
         try
         {
-            System.out.println(entity);
             conn = dataSource.getConnection();
             ps = conn.prepareStatement(entity.sql.toString());
             setValues(ps, entity.values);
@@ -261,7 +310,7 @@ public class DBUtil
         try
         {
             conn = dataSource.getConnection();
-            ps = conn.prepareStatement(entity.sql.toString());
+            ps = conn.prepareStatement(entity.toString());
             setValues(ps, entity.values);
             return ps.executeUpdate();
         }
@@ -283,27 +332,44 @@ public class DBUtil
         }
     }
 
-    public int[] batchUpdate(BatchEntity batchEntity)
+    public List<Integer> batchUpdate(List<Entity> entityList)
     {
         Connection conn = null;
         PreparedStatement ps = null;
+        Boolean autoCommit = null;
         try
         {
             conn = dataSource.getConnection();
-            ps = conn.prepareStatement(batchEntity.sql.toString());
-            setBatchValues(ps, batchEntity.values);
-            return ps.executeBatch();
+            autoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            var result = setBatchValues(conn, entityList);
+            conn.commit();
+            return result;
         }
         catch (SQLException e)
         {
+            try
+            {
+                if (conn != null) conn.rollback();
+            }
+            catch (SQLException ex)
+            {
+                throw new RuntimeException(ex);
+            }
             throw new RuntimeException(e);
         }
         finally
         {
             try
             {
-                if (ps != null && !ps.isClosed()) ps.close();
-                if (conn != null && !conn.isClosed()) conn.close();
+                if (conn != null)
+                {
+                    if (autoCommit != null)
+                    {
+                        conn.setAutoCommit(autoCommit);
+                    }
+                    conn.close();
+                }
             }
             catch (SQLException e)
             {
@@ -312,25 +378,104 @@ public class DBUtil
         }
     }
 
-
-    private void doResolve(IExpression expression, Map<String, Method> methodsMap, Map<Method, Object> pairs, List<Method> methods)
+    private void doResolve(NewExpression<?> newExpression, List<BaseMapping> baseMappings) throws NoSuchMethodException
     {
-        if (expression instanceof MappingExpression)
+        var map = Cache.getMethodNameToMethodMapping(newExpression.getTarget());
+        for (var expression : newExpression.getExpressions())
         {
-            doResolveMappingExpression((MappingExpression) expression, methodsMap, pairs, methods);
+            doResolveStart(expression, map, baseMappings);
         }
     }
 
-    private void doResolveMappingExpression(MappingExpression expression, Map<String, Method> methodsMap, Map<Method, Object> pairs, List<Method> methods)
+    private void doResolveStart(IExpression expression, Map<String, Method> methodMap, List<BaseMapping> baseMappings) throws NoSuchMethodException
     {
-        if (expression.getValue() instanceof DbRefExpression || expression.getValue() instanceof DbFuncExpression)
+        if (expression instanceof MethodCallExpression)
         {
-            methods.add(methodsMap.get(expression.getSource()));
+            var methodCall = (MethodCallExpression) expression;
+            var method = methodMap.get(methodCall.getSelectedMethod());
+            if (methodCall.getParams().get(0) instanceof NewExpression<?>)
+            {
+                var newExpression = (NewExpression<?>) methodCall.getParams().get(0);
+                if (!newExpression.getExpressions().isEmpty())
+                {
+                    var newClassMapping = new NewClassMapping(newExpression.getTarget(), method);
+                    List<BaseMapping> list = new ArrayList<>();
+                    doResolve(newExpression, list);
+                    newClassMapping.getMappings().addAll(list);
+                    baseMappings.add(newClassMapping);
+                }
+                else
+                {
+                    var refTableMapping = new RefTableMapping(newExpression.getTarget(), method);
+                    baseMappings.add(refTableMapping);
+                }
+            }
+            else
+            {
+                baseMappings.add(new SetterMapping(method));
+            }
         }
-        else if (expression.getValue() instanceof ValueExpression)
+    }
+
+    public boolean transactionCud(List<Entity> entityList, Integer transactionIsolation)
+    {
+        Connection conn = null;
+        Boolean autoCommit = null;
+        try
         {
-            var value = (ValueExpression) expression.getValue();
-            pairs.put(methodsMap.get(expression.getSource()), value.getValue());
+            conn = dataSource.getConnection();
+            autoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            if (transactionIsolation != null)
+            {
+                conn.setTransactionIsolation(transactionIsolation);
+            }
+            for (var entity : entityList)
+            {
+                var ps = conn.prepareStatement(entity.toString());
+                setValues(ps, entity.values);
+                var count = ps.executeUpdate();
+                if (count < 1)
+                {
+                    conn.rollback();
+                    return false;
+                }
+            }
+            conn.commit();
+            return true;
+        }
+        catch (SQLException e)
+        {
+            if (conn != null)
+            {
+                try
+                {
+                    conn.rollback();
+                }
+                catch (SQLException ex)
+                {
+                    throw new RuntimeException(ex);
+                }
+            }
+            throw new RuntimeException(e);
+        }
+        finally
+        {
+            if (conn != null)
+            {
+                try
+                {
+                    if (autoCommit != null)
+                    {
+                        conn.setAutoCommit(autoCommit);
+                    }
+                    conn.close();
+                }
+                catch (SQLException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
         }
     }
 }

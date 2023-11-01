@@ -4,6 +4,6 @@ public class NoWayException extends RuntimeException
 {
     public NoWayException()
     {
-        super("Please clean and recompile (请重新编译项目)");
+        super("Please clean and reCompile (请重新编译项目)");
     }
 }

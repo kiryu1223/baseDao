@@ -1,6 +1,7 @@
 package com.kiryu1223.baseDao.ExpressionV2;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public interface IExpression
@@ -9,43 +10,69 @@ public interface IExpression
     {
         return new BinaryExpression(left, right, operator);
     }
-    public static ValueExpression value(Object value)
+
+    public static <T> ValueExpression<T> value(T value)
     {
-        return new ValueExpression(value);
+        return new ValueExpression<T>(value);
     }
-    public static DbRefExpression dbRef(int index,String refName)
-    {
-        return new DbRefExpression(index, refName);
-    }
+
     public static UnaryExpression unary(IExpression expression, Operator operator)
     {
         return new UnaryExpression(expression, operator);
     }
-    public static <T> NewExpression<T> New(Class<T> target,IExpression...expressions)
+
+    public static <T> NewExpression<T> New(Class<T> target, IExpression... expressions)
     {
-        return new NewExpression<T>(target, Arrays.stream(expressions).collect(Collectors.toList()));
+        return new NewExpression<T>(target, List.of(expressions));
     }
-    public static MappingExpression mapping(String source,IExpression value)
+
+    public static MappingExpression mapping(String source, IExpression value)
     {
-        return new MappingExpression(source,value);
+        return new MappingExpression(source, value);
     }
-    public static DbFuncExpression dbFunc(DbFuncType funcType,IExpression expression)
+
+    public static MappingsExpression mappings(MappingExpression... mappingExpressions)
     {
-        return new DbFuncExpression(funcType,expression);
+        return new MappingsExpression(List.of(mappingExpressions));
     }
+
+    public static DbFuncExpression dbFunc(DbFuncType funcType, IExpression expression)
+    {
+        return new DbFuncExpression(funcType, expression);
+    }
+
     public static ParensExpression parens(IExpression expression)
     {
         return new ParensExpression(expression);
     }
+
+    public static FieldSelectExpression fieldSelect(IExpression selector, String selected)
+    {
+        return new FieldSelectExpression(selector, selected);
+    }
+
+    public static MethodCallExpression methodCall(IExpression selector, String selected, IExpression... params)
+    {
+        return new MethodCallExpression(selector, selected, List.of(params));
+    }
+
+    public static ReferenceExpression reference(Object t)
+    {
+        return new ReferenceExpression(t);
+    }
+
     enum Type
     {
         Binary,
         Value,
-        DbRef,
         Unary,
         New,
         Mapping,
+        Mappings,
         DbFunc,
         Parens,
+        FieldSelect,
+        MethodCall,
+        Reference,
     }
 }
