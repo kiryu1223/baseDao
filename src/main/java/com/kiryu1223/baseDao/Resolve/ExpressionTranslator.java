@@ -18,14 +18,14 @@ import java.util.Map;
 
 public class ExpressionTranslator extends TreeTranslator
 {
-    private final Map<Name, java.util.List<Class<? extends IExpression>>> methodExpressionTypeMap;
+    private final Map<Name, java.util.List<Info>> methodExpressionTypeMap;
     private final Map<JCTree.Tag, JCTree.JCFieldAccess> opMap;
     private final Map<IExpression.Type, JCTree.JCFieldAccess> expressionMap;
     private final TreeMaker treeMaker;
     private final Names names;
 
     public ExpressionTranslator(
-            Map<Name, java.util.List<Class<? extends IExpression>>> methodExpressionTypeMap,
+            Map<Name, java.util.List<Info>> methodExpressionTypeMap,
             Map<JCTree.Tag, JCTree.JCFieldAccess> opMap,
             Map<IExpression.Type, JCTree.JCFieldAccess> expressionMap,
             TreeMaker treeMaker, Names names)
@@ -42,43 +42,43 @@ public class ExpressionTranslator extends TreeTranslator
     {
         if (invocation.getMethodSelect() instanceof JCTree.JCFieldAccess)
         {
-            var fieldAccess = (JCTree.JCFieldAccess) invocation.getMethodSelect();
-            if (methodExpressionTypeMap.containsKey(fieldAccess.getIdentifier()))
+            JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) invocation.getMethodSelect();
+            if (methodExpressionTypeMap.containsKey(fieldAccess.getIdentifier())
+                    && invocation.getArguments().size() == 1
+                    && invocation.getArguments().get(0) instanceof JCTree.JCLambda)
             {
-                ListBuffer<JCTree.JCExpression> args = new ListBuffer<>();
-                var list = methodExpressionTypeMap.get(fieldAccess.getIdentifier());
-                var i = 0;
-                for (var argument : invocation.getArguments())
+                java.util.List<Info> infoList = methodExpressionTypeMap.get(fieldAccess.getIdentifier());
+                JCTree.JCLambda lambda = (JCTree.JCLambda) invocation.getArguments().get(0);
+                Info info = null;
+                for (Info i : infoList)
                 {
-                    if (argument instanceof JCTree.JCLambda)
+                    if (i.getCount() == lambda.getParameters().size())
                     {
-                        var aClass = list.get(i++);
-                        var lambda = (JCTree.JCLambda) argument;
-                        JCTree.JCExpression body = null;
-                        if (aClass == NewExpression.class)
-                        {
-                            body = tryGetNewExpression(lambda);
-                        }
-                        else
-                        {
-                            body = tryGetExpression(lambda);
-                        }
-                        var decls = new ListBuffer<JCTree.JCVariableDecl>();
-                        var def = treeMaker.VarDef(
-                                treeMaker.Modifiers(0),
-                                names.fromString("unused"), null, null, true);
-                        decls.add(def);
-                        decls.addAll(lambda.params);
-                        var lam = treeMaker.Lambda(decls.toList(), body);
-                        lam.setPos(argument.getPreferredPosition());
-                        args.add(lam);
+                        info = i;
+                        break;
+                    }
+                }
+                if (info != null)
+                {
+                    JCTree.JCExpression body = null;
+                    if (info.getType() == NewExpression.class)
+                    {
+                        body = tryGetNewExpression(lambda);
                     }
                     else
                     {
-                        args.add(argument);
+                        body = tryGetExpression(lambda);
                     }
+                    ListBuffer<JCTree.JCVariableDecl> decls = new ListBuffer<JCTree.JCVariableDecl>();
+                    JCTree.JCVariableDecl def = treeMaker.VarDef(
+                            treeMaker.Modifiers(0),
+                            names.fromString("unused"), null, null);
+                    decls.add(def);
+                    decls.addAll(lambda.params);
+                    JCTree.JCLambda lam = treeMaker.Lambda(decls.toList(), body);
+                    lam.setPos(lambda.getPreferredPosition());
+                    invocation.args = List.of(lam);
                 }
-                invocation.args = args.toList();
             }
         }
         super.visitApply(invocation);
@@ -86,12 +86,11 @@ public class ExpressionTranslator extends TreeTranslator
 
     private JCTree.JCMethodInvocation tryGetNewExpression(JCTree.JCLambda lambda)
     {
-        var r = tryGetExpression(lambda);
+        JCTree.JCMethodInvocation r = tryGetExpression(lambda);
         if (!r.getMethodSelect().equals(expressionMap.get(IExpression.Type.New)))
         {
             if (r.getMethodSelect().equals(expressionMap.get(IExpression.Type.Reference)))
             {
-
                 r = treeMaker.Apply(
                         List.nil(),
                         expressionMap.get(IExpression.Type.New),
@@ -112,7 +111,7 @@ public class ExpressionTranslator extends TreeTranslator
         {
             throw new RuntimeException(lambda.toString());
         }
-        var r = doStart((JCTree.JCExpression) lambda.getBody());
+        JCTree.JCExpression r = doStart((JCTree.JCExpression) lambda.getBody());
         if (r instanceof JCTree.JCMethodInvocation)
         {
             return (JCTree.JCMethodInvocation) r;
@@ -127,10 +126,10 @@ public class ExpressionTranslator extends TreeTranslator
     {
         if (expression instanceof JCTree.JCBinary)
         {
-            var binary = (JCTree.JCBinary) expression;
-            var left = doStart(binary.getLeftOperand());
-            var right = doStart(binary.getRightOperand());
-            var op = opMap.get(binary.getTag());
+            JCTree.JCBinary binary = (JCTree.JCBinary) expression;
+            JCTree.JCExpression left = doStart(binary.getLeftOperand());
+            JCTree.JCExpression right = doStart(binary.getRightOperand());
+            JCTree.JCFieldAccess op = opMap.get(binary.getTag());
             return treeMaker.Apply(
                     List.nil(),
                     expressionMap.get(IExpression.Type.Binary),
@@ -139,8 +138,8 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCUnary)
         {
-            var unary = (JCTree.JCUnary) expression;
-            var value = doStart(unary.getExpression());
+            JCTree.JCUnary unary = (JCTree.JCUnary) expression;
+            JCTree.JCExpression value = doStart(unary.getExpression());
             return treeMaker.Apply(
                     List.nil(),
                     expressionMap.get(IExpression.Type.Unary),
@@ -149,7 +148,7 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCIdent)
         {
-            var ident = (JCTree.JCIdent) expression;
+            JCTree.JCIdent ident = (JCTree.JCIdent) expression;
             return treeMaker.Apply(
                     List.nil(),
                     expressionMap.get(IExpression.Type.Reference),
@@ -158,7 +157,7 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCLiteral)
         {
-            var literal = (JCTree.JCLiteral) expression;
+            JCTree.JCLiteral literal = (JCTree.JCLiteral) expression;
             return treeMaker.Apply(
                     List.nil(),
                     expressionMap.get(IExpression.Type.Value),
@@ -167,8 +166,8 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCFieldAccess)
         {
-            var fieldAccess = (JCTree.JCFieldAccess) expression;
-            var selector = doStart(fieldAccess.getExpression());
+            JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) expression;
+            JCTree.JCExpression selector = doStart(fieldAccess.getExpression());
             return treeMaker.Apply(
                     List.nil(),
                     expressionMap.get(IExpression.Type.FieldSelect),
@@ -177,24 +176,29 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCMethodInvocation)
         {
-            var methodInvocation = (JCTree.JCMethodInvocation) expression;
+            JCTree.JCMethodInvocation methodInvocation = (JCTree.JCMethodInvocation) expression;
             ListBuffer<JCTree.JCExpression> listBuffer = new ListBuffer<>();
 
             if (methodInvocation.getMethodSelect() instanceof JCTree.JCFieldAccess)
             {
-                var fieldAccess = (JCTree.JCFieldAccess) methodInvocation.getMethodSelect();
-                var selector = doStart(fieldAccess.getExpression());
+                JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) methodInvocation.getMethodSelect();
+                JCTree.JCExpression selector = doStart(fieldAccess.getExpression());
                 listBuffer.add(selector);
                 listBuffer.add(treeMaker.Literal(fieldAccess.getIdentifier().toString()));
             }
             else if (methodInvocation.getMethodSelect() instanceof JCTree.JCIdent)
             {
-                var ident = (JCTree.JCIdent) methodInvocation.getMethodSelect();
-                listBuffer.add(treeMaker.Literal(TypeTag.BOT,null));
+                JCTree.JCIdent ident = (JCTree.JCIdent) methodInvocation.getMethodSelect();
+                JCTree.JCMethodInvocation thiz = treeMaker.Apply(
+                        List.nil(),
+                        expressionMap.get(IExpression.Type.Reference),
+                        List.of(treeMaker.Ident(names._this)
+                        ));
+                listBuffer.add(thiz);
                 listBuffer.add(treeMaker.Literal(ident.getName().toString()));
             }
 
-            for (var argument : methodInvocation.getArguments())
+            for (JCTree.JCExpression argument : methodInvocation.getArguments())
             {
                 listBuffer.add(doStart(argument));
             }
@@ -207,15 +211,15 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCNewClass)
         {
-            var newClass = (JCTree.JCNewClass) expression;
+            JCTree.JCNewClass newClass = (JCTree.JCNewClass) expression;
             ListBuffer<JCTree.JCExpression> listBuffer = new ListBuffer<>();
             listBuffer.append(treeMaker.Select(newClass.getIdentifier(), names.fromString("class")));
             if (newClass.getClassBody() != null && !newClass.getClassBody().getMembers().isEmpty())
             {
-                var member = (JCTree.JCBlock) newClass.getClassBody().getMembers().get(0);
-                for (var statement : member.getStatements())
+                JCTree.JCBlock member = (JCTree.JCBlock) newClass.getClassBody().getMembers().get(0);
+                for (JCTree.JCStatement statement : member.getStatements())
                 {
-                    var expressionStatement = (JCTree.JCExpressionStatement) statement;
+                    JCTree.JCExpressionStatement expressionStatement = (JCTree.JCExpressionStatement) statement;
                     listBuffer.add(doStart(expressionStatement.getExpression()));
                 }
             }
@@ -227,7 +231,7 @@ public class ExpressionTranslator extends TreeTranslator
         }
         else if (expression instanceof JCTree.JCTypeCast)
         {
-            var typeCast = (JCTree.JCTypeCast) expression;
+            JCTree.JCTypeCast typeCast = (JCTree.JCTypeCast) expression;
             return doStart(typeCast.getExpression());
         }
         return null;

@@ -18,12 +18,10 @@ public abstract class Statement4<T1, T2, T3, T4>
     protected final Class<T3> c3;
     protected final Class<T4> c4;
     protected final List<Class<?>> joins = new ArrayList<>();
-    protected final DBUtil dbUtil;
     protected final List<Base> bases = new ArrayList<>();
 
-    public Statement4(DBUtil dbUtil, List<Base> bases, List<Class<?>> joins, Class<T1> c1, Class<T2> c2, Class<T3> c3, Class<T4> c4)
+    public Statement4(List<Base> bases, List<Class<?>> joins, Class<T1> c1, Class<T2> c2, Class<T3> c3, Class<T4> c4)
     {
-        this.dbUtil = dbUtil;
         if (bases != null) this.bases.addAll(bases);
         if (joins != null) this.joins.addAll(joins);
         this.c1=c1;
@@ -55,11 +53,21 @@ public abstract class Statement4<T1, T2, T3, T4>
 
     public List<Class<?>> getQueryClasses()
     {
-        return List.of(c1,c2,c3,c4);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c1);
+        list.add(c2);
+        list.add(c3);
+        list.add(c4);
+        return list;
     }
 
     public List<?> getQueryTargets()
     {
-        return List.of(t1, t2, t3, t4);
+        List<Object> list = new ArrayList<>();
+        list.add(t1);
+        list.add(t2);
+        list.add(t3);
+        list.add(t4);
+        return list;
     }
 }

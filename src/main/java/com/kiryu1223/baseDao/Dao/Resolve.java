@@ -1,7 +1,6 @@
 package com.kiryu1223.baseDao.Dao;
 
 import com.kiryu1223.baseDao.Dao.Base.*;
-import com.kiryu1223.baseDao.Dao.Factory.EntityFactory;
 import com.kiryu1223.baseDao.Dao.Inserter.Save;
 import com.kiryu1223.baseDao.JProperty.GetSetHelper;
 import com.kiryu1223.baseDao.Dao.Statement.Statement;
@@ -27,9 +26,9 @@ public class Resolve
 
     public static Entity query(boolean isDistinct, List<Base> bases, NewExpression<?> newExpression, List<Class<?>> queryClasses, List<?> queryTarget, List<Class<?>> joins)
     {
-        var entity = new Entity();
+        Entity entity = new Entity();
         select(entity, isDistinct, newExpression, queryClasses, queryTarget, joins);
-        for (var base : bases)
+        for (Base base : bases)
         {
             if (base instanceof Where)
             {
@@ -53,7 +52,7 @@ public class Resolve
             }
             else if (base instanceof On)
             {
-                on(entity, ((On) base).getOperatorExpression(), queryTarget);
+                on(entity, ((On) base).getExpression(), queryTarget);
             }
         }
         return entity;
@@ -78,8 +77,8 @@ public class Resolve
 
     private static Entity insert(Statement<?> statement)
     {
-        var entity = new Entity();
-        for (var base : statement.getBases())
+        Entity entity = new Entity();
+        for (Base base : statement.getBases())
         {
             if (base instanceof SetData)
             {
@@ -91,12 +90,12 @@ public class Resolve
 
     private static Entity delete(Statement<?> statement)
     {
-        var entity = new Entity();
+        Entity entity = new Entity();
         entity.append("delete").append(" ").append(indexMapping(0))
                 .append(".*").append(" ").append("from").append(" ")
                 .append(Cache.getTableName(statement.getQueryClasses().get(0))).append(" ")
                 .append("as").append(" ").append(indexMapping(0)).append(" ");
-        for (var base : statement.getBases())
+        for (Base base : statement.getBases())
         {
             if (base instanceof Where)
             {
@@ -108,8 +107,8 @@ public class Resolve
 
     private static Entity update(Statement<?> statement)
     {
-        var entity = new Entity();
-        for (var base : statement.getBases())
+        Entity entity = new Entity();
+        for (Base base : statement.getBases())
         {
             if (base instanceof Set)
             {
@@ -126,16 +125,16 @@ public class Resolve
     public static <T> List<Entity> batchSave(List<T> ts)
     {
         List<Entity> entityList = new ArrayList<>(ts.size());
-        var type = ts.get(0).getClass();
-        var tableName = Cache.getTableName(type);
-        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(type);
-        var fields = Cache.getTypeFields(type);
+        Class<?> type = ts.get(0).getClass();
+        String tableName = Cache.getTableName(type);
+        Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(type);
+        List<java.lang.reflect.Field> fields = Cache.getTypeFields(type);
         for (T t : ts)
         {
-            var entity = EntityFactory.get();
+            Entity entity = new Entity();
             entity.append("insert into ").append(tableName).append(" ")
                     .append("set").append(" ");
-            for (var field : fields)
+            for (java.lang.reflect.Field field : fields)
             {
                 if (field.isAnnotationPresent(Id.class))
                 {
@@ -151,7 +150,7 @@ public class Resolve
                 try
                 {
                     entity.append(map.get(field.getName())).append(" = ");
-                    var o = field.get(type);
+                    Object o = field.get(type);
                     if (o != null)
                     {
                         entity.pushValue(o);
@@ -175,16 +174,16 @@ public class Resolve
 
     private static void setData(Entity entity, SetData setData, Class<?> target)
     {
-        var data = setData.getMappingExpressions().getExpressions();
+        List<MappingExpression> data = setData.getMappingExpressions().getExpressions();
         if (!data.isEmpty())
         {
             entity.append("insert into ").append(Cache.getTableName(target)).append(" set ");
-            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target);
-            for (var expression : data)
+            Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target);
+            for (MappingExpression expression : data)
             {
                 if (expression.getValue() instanceof ValueExpression<?>)
                 {
-                    var value = (ValueExpression<?>) expression.getValue();
+                    ValueExpression<?> value = (ValueExpression<?>) expression.getValue();
                     entity.append(map.get(expression.getSource())).append(" = ");
                     if (value.getValue() != null)
                     {
@@ -230,7 +229,7 @@ public class Resolve
         if (isDistinct) entity.append("distinct").append(" ");
         if (!newExpression.getExpressions().isEmpty())
         {
-            for (var expression : newExpression.getExpressions())
+            for (IExpression expression : newExpression.getExpressions())
             {
                 doResolve(entity, expression, queryTarget);
                 entity.append(",");
@@ -243,7 +242,7 @@ public class Resolve
         }
         entity.append(" ");
         entity.append("from").append(" ");
-        for (var c : queryClass)
+        for (Class<?> c : queryClass)
         {
             if (joinClass == null || !joinClass.contains(c))
             {
@@ -292,75 +291,66 @@ public class Resolve
 
     private static void doResolveReferenceExpression(ReferenceExpression reference, Entity entity, List<?> queryTarget)
     {
-        var ref = reference.getReference();
+        Object ref = reference.getReference();
         if (queryTarget.contains(ref))
         {
-            var index = queryTarget.indexOf(ref);
+            int index = queryTarget.indexOf(ref);
             entity.append(indexMapping(index));
         }
         else
         {
-            throw new RuntimeException("doResolveReferenceExpression() " + reference);
+            entity.append("?");
+            entity.values.add(ref);
         }
     }
 
     private static void doResolveFieldSelectExpression(FieldSelectExpression fieldSelect, Entity entity, List<?> queryTarget)
     {
-        var reference = fieldSelect.getSource().getReference();
+        Object reference = fieldSelect.getSource().getReference();
         if (queryTarget.contains(reference))
         {
             doResolve(entity, fieldSelect.getSelector(), queryTarget);
             entity.append(".");
-            var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
+            Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
             entity.append(map.get(fieldSelect.getSelectedField()));
         }
         else
         {
             entity.append("?").append(" ");
-            var val = fieldSelect.getValue();
+            Object val = fieldSelect.getValue();
             entity.values.add(val);
         }
     }
 
     private static void doResolveMethodCallExpression(MethodCallExpression methodCall, Entity entity, List<?> queryTarget)
     {
-        if (methodCall.getSelector() == null)
+        Object reference = methodCall.getSource().getReference();
+        if (queryTarget.contains(reference))
         {
-            for (var param : methodCall.getParams())
+            switch (methodCall.getSelectedMethod())
             {
-                doResolve(entity, param, queryTarget);
+                case "equals":
+                    doResolve(entity, methodCall.getSelector(), queryTarget);
+                    entity.append(" = ");
+                    doResolve(entity, methodCall.getParams().get(0), queryTarget);
+                    break;
+                case "contains":
+                    break;
+                default:
+                    doResolve(entity, methodCall.getSelector(), queryTarget);
+                    Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
+                    entity.append(".").append(map.get(GetSetHelper.getterToFieldName(
+                            methodCall.getSelectedMethod(),
+                            reference.getClass())
+                    ));
+                    break;
             }
         }
         else
         {
-            var reference = methodCall.getSource().getReference();
-            if (queryTarget.contains(reference))
-            {
-                switch (methodCall.getSelectedMethod())
-                {
-                    case "equals":
-                        doResolve(entity, methodCall.getSelector(), queryTarget);
-                        entity.append("=").append(" ");
-                        doResolve(entity, methodCall.getParams().get(0), queryTarget);
-                        break;
-                    case "contains":
-                        break;
-                    default:
-                        doResolve(entity, methodCall.getSelector(), queryTarget);
-                        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(reference.getClass());
-                        entity.append(".").append(map.get(GetSetHelper.getterToFieldName(
-                                methodCall.getSelectedMethod(),
-                                reference.getClass())
-                        ));
-                        break;
-                }
-            }
-            else
-            {
-                entity.append("?").append(" ");
-                var val = methodCall.getValue();
-                entity.values.add(val);
-            }
+            entity.append("?").append(" ");
+            Object val = methodCall.getValue();
+            entity.values.add(val);
         }
     }
 
@@ -382,7 +372,7 @@ public class Resolve
             {
                 entity.append("!(");
                 doResolve(entity, unary.getExpression(), queryTarget);
-                entity.deleteLast().append(")").append(" ");
+                entity.append(")").append(" ");
             }
         }
     }
@@ -446,14 +436,14 @@ public class Resolve
 
     public static Entity save(Save<?> save)
     {
-        var entity = new Entity();
-        var target = save.getTarget();
+        Entity entity = new Entity();
+        Object target = save.getTarget();
         entity.append("insert into ").append(Cache.getTableName(target.getClass()))
                 .append(" ").append("set").append(" ");
-        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
-        var fields = Cache.getTypeFields(target.getClass());
+        Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
+        List<java.lang.reflect.Field> fields = Cache.getTypeFields(target.getClass());
         int count = 0;
-        for (var field : fields)
+        for (java.lang.reflect.Field field : fields)
         {
             if (field.isAnnotationPresent(Id.class))
             {
@@ -468,7 +458,7 @@ public class Resolve
             }
             try
             {
-                var o = field.get(target);
+                Object o = field.get(target);
                 if (o != null)
                 {
                     entity.append(map.get(field.getName())).append(" = ").append("?").append(",");
@@ -487,17 +477,17 @@ public class Resolve
 
     private static void set(Entity entity, Set<?> set)
     {
-        var target = set.getTarget();
+        Object target = set.getTarget();
         entity.append("update ").append(Cache.getTableName(target.getClass())).append(" ")
                 .append("as").append(" ").append(indexMapping(0)).append(" ").append("set").append(" ");
-        var map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
+        Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(target.getClass());
         boolean flag = false;
-        for (var field : target.getClass().getDeclaredFields())
+        for (java.lang.reflect.Field field : target.getClass().getDeclaredFields())
         {
             field.setAccessible(true);
             try
             {
-                var o = field.get(target);
+                Object o = field.get(target);
                 if (o != null)
                 {
                     entity.append(indexMapping(0)).append(".")
@@ -530,7 +520,7 @@ public class Resolve
 
     private static void orderBy(Entity entity, OrderBy orderBy, List<?> queryTarget)
     {
-        var ref = orderBy.getExpression();
+        IExpression ref = orderBy.getExpression();
         entity.append("order by ");
         doResolve(entity, ref, queryTarget);
     }

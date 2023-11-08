@@ -14,12 +14,10 @@ public abstract class Statement2<T1, T2>
     protected final Class<T1> c1;
     protected final Class<T2> c2;
     protected final List<Class<?>> joins = new ArrayList<>();
-    protected final DBUtil dbUtil;
     protected final List<Base> bases = new ArrayList<>();
 
-    public Statement2(DBUtil dbUtil, List<Base> bases,List<Class<?>> joins, Class<T1> c1, Class<T2> c2)
+    public Statement2(List<Base> bases,List<Class<?>> joins, Class<T1> c1, Class<T2> c2)
     {
-        this.dbUtil = dbUtil;
         if(bases!=null)this.bases.addAll(bases);
         if(joins!=null)this.joins.addAll(joins);
         this.c1=c1;
@@ -47,10 +45,17 @@ public abstract class Statement2<T1, T2>
 
     public List<Class<?>> getQueryClasses()
     {
-        return List.of(c1,c2);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c1);
+        list.add(c2);
+        return list;
     }
+
     public List<?> getQueryTargets()
     {
-        return List.of(t1, t2);
+        List<Object> list = new ArrayList<>();
+        list.add(t1);
+        list.add(t2);
+        return list;
     }
 }

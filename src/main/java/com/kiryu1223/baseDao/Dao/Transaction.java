@@ -11,13 +11,7 @@ import java.util.List;
 public class Transaction
 {
     private final List<Statement<?>> commands = new ArrayList<>();
-    private final DBUtil dbUtil;
     private TransactionType transactionType = null;
-
-    public Transaction(DBUtil dbUtil)
-    {
-        this.dbUtil = dbUtil;
-    }
 
     public void push(Statement<?> statement)
     {
@@ -39,17 +33,17 @@ public class Transaction
     {
         if (commands.isEmpty()) return false;
         List<Entity> entities = new ArrayList<>(commands.size());
-        for (var command : commands)
+        for (Statement<?> command : commands)
         {
             entities.add(Resolve.cud(command));
         }
-        return dbUtil.transactionCud(entities, transactionType.getTransactionIsolation());
+        return DBUtil.transactionCud(entities, transactionType.getTransactionIsolation());
     }
 
     public void debug(Func2<List<Entity>> func)
     {
         List<Entity> entities = new ArrayList<>(commands.size());
-        for (var command : commands)
+        for (Statement<?> command : commands)
         {
             entities.add(Resolve.cud(command));
         }

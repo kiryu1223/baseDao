@@ -3,9 +3,11 @@ package com.kiryu1223.baseDao.ExpressionV2;
 import com.kiryu1223.baseDao.Dao.Cache;
 
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 
-public class MethodCallExpression implements IExpression, IHasSource
+public class MethodCallExpression implements IExpression
 {
     private final IExpression selector;
     private final String selectedMethod;
@@ -34,7 +36,6 @@ public class MethodCallExpression implements IExpression, IHasSource
         return params;
     }
 
-    @Override
     public ReferenceExpression getSource()
     {
         if (selector instanceof ReferenceExpression)
@@ -43,12 +44,12 @@ public class MethodCallExpression implements IExpression, IHasSource
         }
         else if (selector instanceof FieldSelectExpression)
         {
-            var fieldSelect = (FieldSelectExpression) selector;
+            FieldSelectExpression fieldSelect = (FieldSelectExpression) selector;
             return fieldSelect.getSource();
         }
         else if (selector instanceof MethodCallExpression)
         {
-            var methodCall = (MethodCallExpression) selector;
+            MethodCallExpression methodCall = (MethodCallExpression) selector;
             return methodCall.getSource();
         }
         throw new RuntimeException(this.toString());
@@ -56,65 +57,43 @@ public class MethodCallExpression implements IExpression, IHasSource
 
     public Object getValue()
     {
+        Object sel = null;
         if (selector instanceof ReferenceExpression)
         {
-            var a = ((ReferenceExpression) selector).getReference();
-            for (var method : a.getClass().getMethods())
-            {
-                method.setAccessible(true);
-                if (method.getName().equals(selectedMethod))
-                {
-                    try
-                    {
-                        return method.invoke(a, params);
-                    }
-                    catch (IllegalAccessException | InvocationTargetException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            sel = ((ReferenceExpression) selector).getReference();
         }
         else if (selector instanceof FieldSelectExpression)
         {
-            var fieldSelect = (FieldSelectExpression) selector;
-            var a = fieldSelect.getValue();
-            var fields = Cache.getTypeFields(a.getClass());
-            for (var field : fields)
-            {
-                if (field.getName().equals(fieldSelect.getSelectedField()))
-                {
-                    try
-                    {
-                        return field.get(a);
-                    }
-                    catch (IllegalAccessException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            FieldSelectExpression fieldSelect = (FieldSelectExpression) selector;
+            sel = fieldSelect.getValue();
         }
         else if (selector instanceof MethodCallExpression)
         {
-            var methodCall = (MethodCallExpression) selector;
-            var a = methodCall.getValue();
-            for (var method : a.getClass().getMethods())
+            MethodCallExpression methodCall = (MethodCallExpression) selector;
+            sel=methodCall.getValue();
+        }
+        List<Class<?>> types = new ArrayList<>();
+        for (IExpression param : params)
+        {
+            if (param instanceof ValueExpression<?>)
             {
-                method.setAccessible(true);
-                if (method.getName().equals(methodCall.getSelectedMethod()))
-                {
-                    try
-                    {
-                        return method.invoke(a, methodCall.getParams());
-                    }
-                    catch (IllegalAccessException | InvocationTargetException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
+                ValueExpression<?> val = (ValueExpression<?>) param;
+                types.add(val.getValue().getClass());
             }
         }
-        throw new RuntimeException(this.toString());
+        if (sel == null)
+        {
+            throw new RuntimeException(this.toString() + " getValue()");
+        }
+        try
+        {
+            Method method = sel.getClass().getMethod(selectedMethod, types.toArray(new Class<?>[]{}));
+            method.setAccessible(true);
+            return method.invoke(sel, params.toArray());
+        }
+        catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 }

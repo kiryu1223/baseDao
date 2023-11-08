@@ -3,7 +3,7 @@ java lambda to static expressionTree to SQL
 
 基于java lambda表达式的orm框架，现仅支持mysql
 
-目前jdk最低需求为11
+需要jdk8
 
 欢迎使用，点star，issue，谢谢喵
 

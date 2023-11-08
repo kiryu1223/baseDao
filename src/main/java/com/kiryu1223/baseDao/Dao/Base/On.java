@@ -1,18 +1,19 @@
 package com.kiryu1223.baseDao.Dao.Base;
 
+import com.kiryu1223.baseDao.ExpressionV2.IExpression;
 import com.kiryu1223.baseDao.ExpressionV2.OperatorExpression;
 
 public class On extends Base
 {
-    private final OperatorExpression operatorExpression;
+    private final IExpression expression;
 
-    public On(OperatorExpression operatorExpression)
+    public On(IExpression expression)
     {
-        this.operatorExpression = operatorExpression;
+        this.expression = expression;
     }
 
-    public OperatorExpression getOperatorExpression()
+    public IExpression getExpression()
     {
-        return operatorExpression;
+        return expression;
     }
 }

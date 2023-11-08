@@ -12,9 +12,9 @@ import com.kiryu1223.baseDao.Dao.Base.Where;
 
 public class Delete<T> extends Cud<T>
 {
-    public Delete(DBUtil dbUtil, Class<T> c1)
+    public Delete(Class<T> c1)
     {
-        super(dbUtil, c1);
+        super(c1);
     }
 
     public Delete<T> where(Func1<T> func)
@@ -40,7 +40,7 @@ public class Delete<T> extends Cud<T>
 
     public int doDelete()
     {
-        var e = Resolve.cud(this);
-        return dbUtil.startUpdate(e);
+        Entity e = Resolve.cud(this);
+        return DBUtil.startUpdate(e);
     }
 }

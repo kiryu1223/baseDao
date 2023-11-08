@@ -5,8 +5,8 @@ import com.kiryu1223.baseDao.Dao.Statement.Statement;
 
 public abstract class Cud<T> extends Statement<T>
 {
-    public Cud(DBUtil dbUtil, Class<T> c1)
+    public Cud(Class<T> c1)
     {
-        super(dbUtil, c1);
+        super(c1);
     }
 }

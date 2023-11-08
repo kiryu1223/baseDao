@@ -20,10 +20,10 @@ public class GetSetHelper
 
     public static String getter(String name, JCTree.JCExpression expression)
     {
-        var getter = "";
+        String getter = "";
         if (expression instanceof JCTree.JCPrimitiveTypeTree)
         {
-            var primitiveTypeTree = (JCTree.JCPrimitiveTypeTree) expression;
+            JCTree.JCPrimitiveTypeTree primitiveTypeTree = (JCTree.JCPrimitiveTypeTree) expression;
             if (primitiveTypeTree.getPrimitiveTypeKind() == TypeKind.BOOLEAN
                     && name.startsWith("is"))
             {
@@ -36,11 +36,11 @@ public class GetSetHelper
         }
         else if (expression instanceof JCTree.JCIdent)
         {
-            var type = (JCTree.JCIdent) expression;
+            JCTree.JCIdent type = (JCTree.JCIdent) expression;
             if (type.getName().equals(names.fromString("Boolean"))
                     && name.startsWith("is"))
             {
-                var removedIs = name.substring(2);
+                String removedIs = name.substring(2);
                 getter = "get" + firstUpperCase(removedIs);
             }
             else
@@ -65,7 +65,7 @@ public class GetSetHelper
         {
             if (name.startsWith("is"))
             {
-                var removedIs = name.substring(2);
+                String removedIs = name.substring(2);
                 return "set" + firstUpperCase(removedIs);
             }
         }
@@ -86,34 +86,34 @@ public class GetSetHelper
     {
         if (expression instanceof JCTree.JCNewClass)
         {
-            var newClass = (JCTree.JCNewClass) expression;
+            JCTree.JCNewClass newClass = (JCTree.JCNewClass) expression;
             if (newClass.getIdentifier() instanceof JCTree.JCIdent)
             {
                 return ((JCTree.JCIdent) newClass.getIdentifier()).getName();
             }
             else if (newClass.getIdentifier() instanceof JCTree.JCTypeApply)
             {
-                var typeApply = (JCTree.JCTypeApply) newClass.getIdentifier();
+                JCTree.JCTypeApply typeApply = (JCTree.JCTypeApply) newClass.getIdentifier();
                 return ((JCTree.JCIdent) typeApply.getType()).getName();
             }
         }
         else if (expression instanceof JCTree.JCTypeCast)
         {
-            var typeCast = (JCTree.JCTypeCast) expression;
+            JCTree.JCTypeCast typeCast = (JCTree.JCTypeCast) expression;
             if (typeCast.getType() instanceof JCTree.JCIdent)
             {
-                var ident = (JCTree.JCIdent) typeCast.getType();
+                JCTree.JCIdent ident = (JCTree.JCIdent) typeCast.getType();
                 return ident.getName();
             }
             else if (typeCast.getType() instanceof JCTree.JCTypeApply)
             {
-                var typeApply = (JCTree.JCTypeApply) typeCast.getType();
+                JCTree.JCTypeApply typeApply = (JCTree.JCTypeApply) typeCast.getType();
                 return ((JCTree.JCIdent) typeApply.getType()).getName();
             }
         }
         else if (expression instanceof JCTree.JCIdent)
         {
-            var name = ((JCTree.JCIdent) expression).getName();
+            Name name = ((JCTree.JCIdent) expression).getName();
             if (nameMap.containsKey(name))
             {
                 return nameMap.get(name);
@@ -162,17 +162,17 @@ public class GetSetHelper
         }
         else if (expression instanceof JCTree.JCAssign)
         {
-            var assign = (JCTree.JCAssign) expression;
+            JCTree.JCAssign assign = (JCTree.JCAssign) expression;
             return getType(assign.getVariable(), nameMap);
         }
         else if (expression instanceof JCTree.JCBinary)
         {
-            var binary = (JCTree.JCBinary) expression;
+            JCTree.JCBinary binary = (JCTree.JCBinary) expression;
             return getType(binary.getLeftOperand(), nameMap);
         }
         else if (expression instanceof JCTree.JCFieldAccess)
         {
-            var fieldAccess = (JCTree.JCFieldAccess) expression;
+            JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) expression;
             return getType(fieldAccess.getExpression(), nameMap);
         }
         else if (expression instanceof JCTree.JCMethodInvocation)
@@ -185,24 +185,25 @@ public class GetSetHelper
     public static String getterToFieldName(String getterName, Class<?> c)
     {
         Method getter = null;
-        for (var method : c.getMethods())
+        for (Method method : c.getMethods())
         {
             if (method.getName().equals(getterName))
             {
                 getter = method;
+                break;
             }
         }
         if (getter == null)
         {
             throw new RuntimeException("没有方法 " + getterName);
         }
-        var name = "";
-        var returnType = getter.getReturnType();
+        String name = "";
+        Class<?> returnType = getter.getReturnType();
         if (returnType.equals(Boolean.class))
         {
-            var mName = firstLowerCase(getter.getName().substring(3));
-            var pass = false;
-            for (var typeField : Cache.getTypeFields(c))
+            String mName = firstLowerCase(getter.getName().substring(3));
+            boolean pass = false;
+            for (java.lang.reflect.Field typeField : Cache.getTypeFields(c))
             {
                 if (typeField.getName().equals(mName))
                 {
@@ -213,7 +214,7 @@ public class GetSetHelper
             if (!pass)
             {
                 mName = "is" + firstUpperCase(mName);
-                for (var typeField : Cache.getTypeFields(c))
+                for (java.lang.reflect.Field typeField : Cache.getTypeFields(c))
                 {
                     if (typeField.getName().equals(mName))
                     {
@@ -224,14 +225,14 @@ public class GetSetHelper
             }
             if (!pass)
             {
-                throw new RuntimeException(getter.toString());
+                throw new RuntimeException("找不到对应属性 " + getterName);
             }
         }
         else if (returnType.equals(Boolean.TYPE))
         {
-            var mName = getter.getName();
-            var pass = false;
-            for (var typeField : Cache.getTypeFields(c))
+            String mName = getter.getName();
+            boolean pass = false;
+            for (java.lang.reflect.Field typeField : Cache.getTypeFields(c))
             {
                 if (typeField.getName().equals(mName))
                 {
@@ -242,7 +243,7 @@ public class GetSetHelper
             if (!pass)
             {
                 mName = firstLowerCase(mName.substring(2));
-                for (var typeField : Cache.getTypeFields(c))
+                for (java.lang.reflect.Field typeField : Cache.getTypeFields(c))
                 {
                     if (typeField.getName().equals(mName))
                     {
@@ -253,20 +254,21 @@ public class GetSetHelper
             }
             if (!pass)
             {
-                throw new RuntimeException(getter.toString());
+                throw new RuntimeException("找不到对应属性 " + getterName);
             }
         }
         else
         {
             name = firstLowerCase(getter.getName().substring(3));
+            try
+            {
+                c.getField(name);
+            }
+            catch (NoSuchFieldException e)
+            {
+                throw new RuntimeException(e + " 找不到对应属性 " + getterName);
+            }
         }
         return name;
-    }
-
-    private boolean Ok;
-
-    public boolean isOk()
-    {
-        return Ok;
     }
 }

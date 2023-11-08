@@ -46,7 +46,7 @@ public class Entity
     {
         if (sql.length() > 0)
         {
-            var last=sql.length() - 1;
+            int last=sql.length() - 1;
             switch (sql.charAt(last))
             {
                 case ',':

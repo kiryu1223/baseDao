@@ -11,9 +11,9 @@ import com.kiryu1223.baseDao.ExpressionV2.MappingsExpression;
 
 public class Insert<T> extends Cud<T>
 {
-    public Insert(DBUtil dbUtil, Class<T> c1)
+    public Insert( Class<T> c1)
     {
-        super(dbUtil, c1);
+        super(c1);
     }
 
     public Insert<T> pushData(Func2<T> func)
@@ -39,7 +39,7 @@ public class Insert<T> extends Cud<T>
 
     public int doSave()
     {
-        var e = Resolve.cud(this);
-        return dbUtil.startUpdate(e);
+        Entity e = Resolve.cud(this);
+        return DBUtil.startUpdate(e);
     }
 }

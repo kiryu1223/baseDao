@@ -22,7 +22,7 @@ public class EntityFactory
 
     public static Entity get()
     {
-        var res = Pool.poll();
+        Entity res = Pool.poll();
         if (res == null)
         {
             res = new Entity();

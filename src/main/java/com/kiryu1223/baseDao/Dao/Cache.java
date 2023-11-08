@@ -19,7 +19,7 @@ public class Cache
     private static void addClassFieldMapping(Class<?> c)
     {
         Map<String, String> map = new HashMap<>();
-        for (var field : c.getDeclaredFields())
+        for (Field field : c.getDeclaredFields())
         {
             field.setAccessible(true);
             map.put(field.getName(), field.isAnnotationPresent(Column.class) ? field.getAnnotation(Column.class).name() : field.getName());
@@ -40,7 +40,7 @@ public class Cache
 
     private static void addClassNameToTableNameMapping(Class<?> c)
     {
-        var table = c.isAnnotationPresent(Table.class) ?
+        String table = c.isAnnotationPresent(Table.class) ?
                 "`" + c.getAnnotation(Table.class).schema() + "`.`" + c.getAnnotation(Table.class).name() + "`"
                 : "`" + c.getSimpleName() + "`";
         ClassNameToTableNameMappingMap.put(c, table);
@@ -62,7 +62,7 @@ public class Cache
         if (c.isAnnotationPresent(Entity.class))
         {
             Map<String, Field> map = new HashMap<>();
-            for (var field : c.getDeclaredFields())
+            for (Field field : c.getDeclaredFields())
             {
                 field.setAccessible(true);
                 map.put(field.isAnnotationPresent(Column.class) ? field.getAnnotation(Column.class).name() : field.getName(), field);
@@ -89,7 +89,7 @@ public class Cache
     private static void addFieldNameToFieldMapping(Class<?> c)
     {
         Map<String, Field> map = new HashMap<>();
-        for (var field : c.getDeclaredFields())
+        for (Field field : c.getDeclaredFields())
         {
             field.setAccessible(true);
             map.put(field.getName(), field);
@@ -111,7 +111,7 @@ public class Cache
     private static void addMethodNameToMethodMapping(Class<?> c)
     {
         Map<String, Method> methodMap = new HashMap<>();
-        for (var method : c.getDeclaredMethods())
+        for (Method method : c.getDeclaredMethods())
         {
             method.setAccessible(true);
             if (method.getParameterCount() == 1)
@@ -137,8 +137,8 @@ public class Cache
     {
         if (!TypeFieldMap.containsKey(c))
         {
-            var fields = new ArrayList<Field>();
-            for (var a : c.getDeclaredFields())
+            ArrayList<Field> fields = new ArrayList<Field>();
+            for (Field a : c.getDeclaredFields())
             {
                 a.setAccessible(true);
                 fields.add(a);

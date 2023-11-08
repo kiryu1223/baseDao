@@ -2,9 +2,12 @@ package com.kiryu1223.baseDao.ExpressionV2;
 
 import com.kiryu1223.baseDao.Dao.Cache;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
 
-public class FieldSelectExpression implements IExpression, IHasSource
+public class FieldSelectExpression implements IExpression
 {
     private final IExpression selector;
     private final String selectedField;
@@ -25,7 +28,6 @@ public class FieldSelectExpression implements IExpression, IHasSource
         return selectedField;
     }
 
-    @Override
     public ReferenceExpression getSource()
     {
         if (selector instanceof ReferenceExpression)
@@ -34,12 +36,12 @@ public class FieldSelectExpression implements IExpression, IHasSource
         }
         else if (selector instanceof FieldSelectExpression)
         {
-            var fieldSelect = (FieldSelectExpression) selector;
+            FieldSelectExpression fieldSelect = (FieldSelectExpression) selector;
             return fieldSelect.getSource();
         }
         else if (selector instanceof MethodCallExpression)
         {
-            var methodCall = (MethodCallExpression) selector;
+            MethodCallExpression methodCall = (MethodCallExpression) selector;
             return methodCall.getSource();
         }
         throw new RuntimeException(this.toString());
@@ -47,65 +49,34 @@ public class FieldSelectExpression implements IExpression, IHasSource
 
     public Object getValue()
     {
+        Object sel = null;
         if (selector instanceof ReferenceExpression)
         {
-            var a = ((ReferenceExpression) selector).getReference();
-            var fields = Cache.getTypeFields(a.getClass());
-            for (var field : fields)
-            {
-                if (field.getName().equals(selectedField))
-                {
-                    try
-                    {
-                        return field.get(a);
-                    }
-                    catch (IllegalAccessException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            sel = ((ReferenceExpression) selector).getReference();
         }
         else if (selector instanceof FieldSelectExpression)
         {
-            var fieldSelect = (FieldSelectExpression) selector;
-            var a = fieldSelect.getValue();
-            var fields = Cache.getTypeFields(a.getClass());
-            for (var field : fields)
-            {
-                if (field.getName().equals(fieldSelect.selectedField))
-                {
-                    try
-                    {
-                        return field.get(a);
-                    }
-                    catch (IllegalAccessException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            FieldSelectExpression fieldSelect = (FieldSelectExpression) selector;
+            sel = fieldSelect.getValue();
         }
         else if (selector instanceof MethodCallExpression)
         {
-            var methodCall = (MethodCallExpression) selector;
-            var a = methodCall.getValue();
-            for (var method : a.getClass().getMethods())
-            {
-                method.setAccessible(true);
-                if (method.getName().equals(methodCall.getSelectedMethod()))
-                {
-                    try
-                    {
-                        return method.invoke(a, methodCall.getParams());
-                    }
-                    catch (IllegalAccessException | InvocationTargetException e)
-                    {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
+            MethodCallExpression methodCall = (MethodCallExpression) selector;
+            sel = methodCall.getValue();
         }
-        throw new RuntimeException(this.toString());
+        if (sel == null)
+        {
+            throw new RuntimeException(this.toString() + " getValue()");
+        }
+        try
+        {
+            Field field = sel.getClass().getDeclaredField(selectedField);
+            field.setAccessible(true);
+            return field.get(sel);
+        }
+        catch (NoSuchFieldException | IllegalAccessException e)
+        {
+            throw new RuntimeException(e);
+        }
     }
 }

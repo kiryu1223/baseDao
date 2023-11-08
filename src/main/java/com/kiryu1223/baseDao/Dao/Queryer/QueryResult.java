@@ -13,7 +13,6 @@ import java.util.Map;
 
 public class QueryResult<R>
 {
-    private final DBUtil dbUtil;
     private final List<Base> bases;
     private final List<Class<?>> queryClasses;
     private final List<?> queryTargets;
@@ -22,9 +21,8 @@ public class QueryResult<R>
     private boolean isDistinct;
     private Entity entity = null;
 
-    public QueryResult(DBUtil dbUtil, List<Base> bases, List<Class<?>> queryClasses, List<?> queryTargets, List<Class<?>> joinClasses, NewExpression<R> newExpression)
+    public QueryResult(List<Base> bases, List<Class<?>> queryClasses, List<?> queryTargets, List<Class<?>> joinClasses, NewExpression<R> newExpression)
     {
-        this.dbUtil = dbUtil;
         this.queryClasses = queryClasses;
         this.queryTargets = queryTargets;
         this.joinClasses = joinClasses;
@@ -52,39 +50,39 @@ public class QueryResult<R>
     public List<R> toList()
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, newExpression);
+        return DBUtil.startQuery(entity, newExpression);
     }
 
     public <Key> Map<Key, R> toMap(Func0<R, Key> getKey)
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, newExpression, getKey);
+        return DBUtil.startQuery(entity, newExpression, getKey);
     }
 
     public <Key, Value> Map<Key, Value> toMap(Func0<R, Key> getKey, Func0<R, Value> getValue)
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, newExpression, getKey, getValue);
+        return DBUtil.startQuery(entity, newExpression, getKey, getValue);
     }
 
     public void toListAndThen(Func2<List<R>> then)
     {
         tryGetEntity();
-        var list = dbUtil.startQuery(entity, newExpression);
+        List<R> list = DBUtil.startQuery(entity, newExpression);
         then.invoke(list);
     }
 
     public <Key> void toMapAndThen(Func0<R, Key> getKey, Func2<Map<Key, R>> then)
     {
         tryGetEntity();
-        var map = dbUtil.startQuery(entity, newExpression, getKey);
+        Map<Key, R> map = DBUtil.startQuery(entity, newExpression, getKey);
         then.invoke(map);
     }
 
     public <Key, Value> void toMapAndThen(Func0<R, Key> getKey, Func0<R, Value> getValue, Func2<Map<Key, Value>> then)
     {
         tryGetEntity();
-        var map = dbUtil.startQuery(entity, newExpression, getKey, getValue);
+        Map<Key, Value> map = DBUtil.startQuery(entity, newExpression, getKey, getValue);
         then.invoke(map);
     }
 

@@ -15,16 +15,16 @@ import java.lang.reflect.InvocationTargetException;
 
 public class Update<T> extends Cud<T>
 {
-    public Update(DBUtil dbUtil, Class<T> c1)
+    public Update(Class<T> c1)
     {
-        super(dbUtil, c1);
+        super(c1);
     }
 
     public Update<T> set(Func2<T> func)
     {
         try
         {
-            var t = c1.getConstructor().newInstance();
+            T t = c1.getConstructor().newInstance();
             func.invoke(t);
             bases.add(new Set<T>(t));
             return this;
@@ -48,8 +48,8 @@ public class Update<T> extends Cud<T>
 
     public int doUpdate()
     {
-        var e = Resolve.cud(this);
-        return dbUtil.startUpdate(e);
+        Entity e = Resolve.cud(this);
+        return DBUtil.startUpdate(e);
     }
 
     public Entity toEntity()

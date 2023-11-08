@@ -11,6 +11,8 @@ import com.kiryu1223.baseDao.Error.NoWayException;
 import com.kiryu1223.baseDao.Dao.Statement.Statement;
 import com.kiryu1223.baseDao.Resolve.Expression;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -18,9 +20,9 @@ public class Query<T> extends Statement<T>
 {
     private Entity entity = null;
 
-    public Query(DBUtil dbUtil, Class<T> c1)
+    public Query(Class<T> c1)
     {
-        super(dbUtil, c1);
+        super(c1);
     }
 
     public String toSql()
@@ -44,39 +46,39 @@ public class Query<T> extends Statement<T>
     public List<T> toList()
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, IExpression.New(c1));
+        return DBUtil.startQuery(entity, IExpression.New(c1));
     }
 
     public <Key> Map<Key, T> toMap(Func0<T, Key> getKey)
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, IExpression.New(c1), getKey);
+        return DBUtil.startQuery(entity, IExpression.New(c1), getKey);
     }
 
     public <Key, Value> Map<Key, Value> toMap(Func0<T, Key> getKey, Func0<T, Value> getValue)
     {
         tryGetEntity();
-        return dbUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
+        return DBUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
     }
 
     public void toListAndThen(Func2<List<T>> then)
     {
         tryGetEntity();
-        var list = dbUtil.startQuery(entity, IExpression.New(c1));
+        List<T> list = DBUtil.startQuery(entity, IExpression.New(c1));
         then.invoke(list);
     }
 
     public <Key> void toMapAndThen(Func0<T, Key> getKey, Func2<Map<Key, T>> then)
     {
         tryGetEntity();
-        var map = dbUtil.startQuery(entity, IExpression.New(c1), getKey);
+        Map<Key, T> map = DBUtil.startQuery(entity, IExpression.New(c1), getKey);
         then.invoke(map);
     }
 
     public <Key, Value> void toMapAndThen(Func0<T, Key> getKey, Func0<T, Value> getValue, Func2<Map<Key, Value>> then)
     {
         tryGetEntity();
-        var map = dbUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
+        Map<Key, Value> map = DBUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
         then.invoke(map);
     }
 
@@ -84,7 +86,7 @@ public class Query<T> extends Statement<T>
     {
         if (entity == null)
         {
-            entity = Resolve.query(false, bases, IExpression.New(c1), getQueryClasses(),getQueryTargets(), null);
+            entity = Resolve.query(false, bases, IExpression.New(c1), getQueryClasses(), getQueryTargets(), null);
         }
     }
 
@@ -103,7 +105,7 @@ public class Query<T> extends Statement<T>
         throw new NoWayException();
     }
 
-    public <R> QueryResult<R> select(@Expression Func0<T, R> func)
+    public <R> QueryResult<R> select(@Expression(NewExpression.class) Func0<T, R> func)
     {
         throw new NoWayException();
     }
@@ -114,9 +116,9 @@ public class Query<T> extends Statement<T>
         return this;
     }
 
-    public <R> QueryResult<R> select(ExpressionFunc.NR1<Void, T, R> e1)
+    public <R> QueryResult<R> select(ExpressionFunc.NR1<Void, T, R> r)
     {
-        return new QueryResult<R>(dbUtil, bases, getQueryClasses(),getQueryTargets(), null, e1.invoke(null, t1));
+        return new QueryResult<R>(bases, getQueryClasses(), getQueryTargets(), null, r.invoke(null, t1));
     }
 
     public Query<T> orderBy(ExpressionFunc.E1<Void, T> e1)
@@ -146,24 +148,32 @@ public class Query<T> extends Statement<T>
     public <T2> Query2<T, T2> innerJoin(Class<T2> c)
     {
         bases.add(new Join(c, JoinType.Inner));
-        return new Query2<>(dbUtil, bases, List.of(c), c1, c);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c);
+        return new Query2<>(bases, list, c1, c);
     }
 
     public <T2> Query2<T, T2> leftJoin(Class<T2> c)
     {
         bases.add(new Join(c, JoinType.Left));
-        return new Query2<>(dbUtil, bases, List.of(c), c1, c);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c);
+        return new Query2<>(bases, list, c1, c);
     }
 
     public <T2> Query2<T, T2> rightJoin(Class<T2> c)
     {
         bases.add(new Join(c, JoinType.Right));
-        return new Query2<>(dbUtil, bases, List.of(c), c1, c);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c);
+        return new Query2<>(bases, list, c1, c);
     }
 
     public <T2> Query2<T, T2> fullJoin(Class<T2> c)
     {
         bases.add(new Join(c, JoinType.Full));
-        return new Query2<>(dbUtil, bases, List.of(c), c1, c);
+        List<Class<?>> list = new ArrayList<>();
+        list.add(c);
+        return new Query2<>(bases, list, c1, c);
     }
 }
