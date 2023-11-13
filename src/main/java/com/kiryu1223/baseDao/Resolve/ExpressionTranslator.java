@@ -3,6 +3,7 @@ package com.kiryu1223.baseDao.Resolve;
 import com.kiryu1223.baseDao.ExpressionV2.FieldSelectExpression;
 import com.kiryu1223.baseDao.ExpressionV2.IExpression;
 import com.kiryu1223.baseDao.ExpressionV2.NewExpression;
+import com.sun.org.apache.bcel.internal.generic.NEW;
 import com.sun.source.tree.LambdaExpressionTree;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
@@ -23,6 +24,7 @@ public class ExpressionTranslator extends TreeTranslator
     private final Map<IExpression.Type, JCTree.JCFieldAccess> expressionMap;
     private final TreeMaker treeMaker;
     private final Names names;
+    private final ThreadLocal<JCTree.JCFieldAccess> localClass = new ThreadLocal<>();
 
     public ExpressionTranslator(
             Map<Name, java.util.List<Info>> methodExpressionTypeMap,
@@ -40,14 +42,24 @@ public class ExpressionTranslator extends TreeTranslator
     @Override
     public void visitApply(JCTree.JCMethodInvocation invocation)
     {
-        if (invocation.getMethodSelect() instanceof JCTree.JCFieldAccess)
+        Name name = null;
+        if (invocation.getMethodSelect() instanceof JCTree.JCIdent)
+        {
+            JCTree.JCIdent ident = (JCTree.JCIdent) invocation.getMethodSelect();
+            name = ident.getName();
+        }
+        else if (invocation.getMethodSelect() instanceof JCTree.JCFieldAccess)
         {
             JCTree.JCFieldAccess fieldAccess = (JCTree.JCFieldAccess) invocation.getMethodSelect();
-            if (methodExpressionTypeMap.containsKey(fieldAccess.getIdentifier())
+            name = fieldAccess.getIdentifier();
+        }
+        if (name != null)
+        {
+            if (methodExpressionTypeMap.containsKey(name)
                     && invocation.getArguments().size() == 1
                     && invocation.getArguments().get(0) instanceof JCTree.JCLambda)
             {
-                java.util.List<Info> infoList = methodExpressionTypeMap.get(fieldAccess.getIdentifier());
+                java.util.List<Info> infoList = methodExpressionTypeMap.get(name);
                 JCTree.JCLambda lambda = (JCTree.JCLambda) invocation.getArguments().get(0);
                 Info info = null;
                 for (Info i : infoList)
@@ -189,11 +201,12 @@ public class ExpressionTranslator extends TreeTranslator
             else if (methodInvocation.getMethodSelect() instanceof JCTree.JCIdent)
             {
                 JCTree.JCIdent ident = (JCTree.JCIdent) methodInvocation.getMethodSelect();
+                JCTree.JCFieldAccess loc = localClass.get();
                 JCTree.JCMethodInvocation thiz = treeMaker.Apply(
                         List.nil(),
                         expressionMap.get(IExpression.Type.Reference),
-                        List.of(treeMaker.Ident(names._this)
-                        ));
+                        List.of(loc == null ? treeMaker.Ident(names._this) : loc)
+                );
                 listBuffer.add(thiz);
                 listBuffer.add(treeMaker.Literal(ident.getName().toString()));
             }
@@ -213,15 +226,18 @@ public class ExpressionTranslator extends TreeTranslator
         {
             JCTree.JCNewClass newClass = (JCTree.JCNewClass) expression;
             ListBuffer<JCTree.JCExpression> listBuffer = new ListBuffer<>();
-            listBuffer.append(treeMaker.Select(newClass.getIdentifier(), names.fromString("class")));
+            JCTree.JCFieldAccess loc = treeMaker.Select(newClass.getIdentifier(), names.fromString("class"));
+            listBuffer.append(loc);
             if (newClass.getClassBody() != null && !newClass.getClassBody().getMembers().isEmpty())
             {
+                localClass.set(loc);
                 JCTree.JCBlock member = (JCTree.JCBlock) newClass.getClassBody().getMembers().get(0);
                 for (JCTree.JCStatement statement : member.getStatements())
                 {
                     JCTree.JCExpressionStatement expressionStatement = (JCTree.JCExpressionStatement) statement;
                     listBuffer.add(doStart(expressionStatement.getExpression()));
                 }
+                localClass.remove();
             }
             return treeMaker.Apply(
                     List.nil(),
@@ -233,6 +249,16 @@ public class ExpressionTranslator extends TreeTranslator
         {
             JCTree.JCTypeCast typeCast = (JCTree.JCTypeCast) expression;
             return doStart(typeCast.getExpression());
+        }
+        else if (expression instanceof JCTree.JCParens)
+        {
+            JCTree.JCParens parens = (JCTree.JCParens) expression;
+            JCTree.JCExpression val = doStart(parens.getExpression());
+            return treeMaker.Apply(
+                    List.nil(),
+                    expressionMap.get(IExpression.Type.Parens),
+                    List.of(val)
+            );
         }
         return null;
     }

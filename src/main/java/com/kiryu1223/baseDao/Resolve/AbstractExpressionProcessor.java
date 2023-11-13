@@ -1,5 +1,6 @@
 package com.kiryu1223.baseDao.Resolve;
 
+import com.kiryu1223.baseDao.ExpressionV2.NewExpression;
 import com.kiryu1223.baseDao.JProperty.GetSetHelper;
 import com.kiryu1223.baseDao.ExpressionV2.DbFuncType;
 import com.kiryu1223.baseDao.ExpressionV2.IExpression;
@@ -27,7 +28,7 @@ import javax.lang.model.util.Types;
 import java.lang.annotation.Annotation;
 import java.util.*;
 
-public class AbstractExpressionProcessor extends AbstractProcessor
+public abstract class AbstractExpressionProcessor extends AbstractProcessor
 {
     private JavacTrees javacTrees;
     private Context context;
@@ -90,10 +91,7 @@ public class AbstractExpressionProcessor extends AbstractProcessor
         return SourceVersion.RELEASE_8;
     }
 
-    public void registerManager()
-    {
-
-    }
+    public abstract void registerManager();
 
     protected void register(Class<?> clazz)
     {
@@ -177,10 +175,65 @@ public class AbstractExpressionProcessor extends AbstractProcessor
     {
         if (!roundEnv.processingOver())
         {
-            Set<? extends Element> rootData = roundEnv.getRootElements();
+            for (Element root : roundEnv.getRootElements())
+            {
+                FindDown(root);
+            }
+
+            //依托答辩↓
+            Name expName = names.fromString("Expression");
+            for (Element element : roundEnv.getElementsAnnotatedWith(Expression.class))
+            {
+                Element enclosingElement = element.getEnclosingElement();
+                JCTree.JCMethodDecl methodDecl = (JCTree.JCMethodDecl) javacTrees.getTree(enclosingElement);
+                if (methodDecl.getParameters().size() != 1) continue;
+                JCTree.JCVariableDecl param = methodDecl.getParameters().get(0);
+                if (!(param.getType() instanceof JCTree.JCTypeApply)) continue;
+                int count = ((JCTree.JCTypeApply) param.getType()).getTypeArguments().size();
+                if (count == 0) continue;
+                Info info = null;
+                for (JCTree.JCAnnotation annotation : param.getModifiers().getAnnotations())
+                {
+                    if (annotation.getAnnotationType() instanceof JCTree.JCIdent
+                            && ((JCTree.JCIdent) annotation.getAnnotationType()).getName().equals(expName))
+                    {
+                        Class<? extends IExpression> cc = IExpression.class;
+                        if (!annotation.getArguments().isEmpty())
+                        {
+                            for (JCTree.JCExpression argument : annotation.getArguments())
+                            {
+                                JCTree.JCAssign assign = (JCTree.JCAssign) argument;
+                                if (assign.getVariable().toString().equals("value"))
+                                {
+                                    switch (assign.getExpression().toString())
+                                    {
+                                        case "NewExpression.class":
+                                            cc = NewExpression.class;
+                                            break;
+                                    }
+                                }
+                            }
+                        }
+                        info = new Info(cc, count);
+                        break;
+                    }
+                }
+                if (info == null) continue;
+                if (methodExpressionTypeMap.containsKey(methodDecl.getName()))
+                {
+                    List<Info> list = methodExpressionTypeMap.get(methodDecl.getName());
+                    list.add(info);
+                }
+                else
+                {
+                    List<Info> o = new ArrayList<>();
+                    o.add(info);
+                    methodExpressionTypeMap.put(methodDecl.getName(), o);
+                }
+            }
 
             //表达式树流程
-            for (Element root : rootData)
+            for (Element root : roundEnv.getRootElements())
             {
                 if (!root.getKind().equals(ElementKind.CLASS)) continue;
                 JCTree.JCClassDecl jcClassDecl = javacTrees.getTree((TypeElement) root);
@@ -302,5 +355,22 @@ public class AbstractExpressionProcessor extends AbstractProcessor
 //            }
         }
         return false;
+    }
+
+    private void FindDown(Element element)
+    {
+        for (Element enclosedElement : element.getEnclosedElements())
+        {
+            if (enclosedElement instanceof Symbol.MethodSymbol)
+            {
+                Symbol.MethodSymbol methodSymbol = ((Symbol.MethodSymbol) enclosedElement);
+                JCTree.JCMethodDecl methodDecl = javacTrees.getTree(methodSymbol);
+                System.out.println(methodDecl.getBody());
+            }
+            else
+            {
+                FindDown(enclosedElement);
+            }
+        }
     }
 }

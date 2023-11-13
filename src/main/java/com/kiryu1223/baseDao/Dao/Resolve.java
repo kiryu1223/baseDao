@@ -13,6 +13,7 @@ import com.kiryu1223.baseDao.Dao.Updater.Update;
 
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
+import java.lang.reflect.Field;
 import java.util.*;
 
 public class Resolve
@@ -128,13 +129,13 @@ public class Resolve
         Class<?> type = ts.get(0).getClass();
         String tableName = Cache.getTableName(type);
         Map<String, String> map = Cache.getJavaFieldNameToDbFieldNameMappingMap(type);
-        List<java.lang.reflect.Field> fields = Cache.getTypeFields(type);
+        List<Field> fields = Cache.getTypeFields(type);
         for (T t : ts)
         {
             Entity entity = new Entity();
             entity.append("insert into ").append(tableName).append(" ")
                     .append("set").append(" ");
-            for (java.lang.reflect.Field field : fields)
+            for (Field field : fields)
             {
                 if (field.isAnnotationPresent(Id.class))
                 {
@@ -229,12 +230,7 @@ public class Resolve
         if (isDistinct) entity.append("distinct").append(" ");
         if (!newExpression.getExpressions().isEmpty())
         {
-            for (IExpression expression : newExpression.getExpressions())
-            {
-                doResolve(entity, expression, queryTarget);
-                entity.append(",");
-            }
-            entity.deleteLast();
+            doResolve(entity, newExpression, queryTarget);
         }
         else
         {
@@ -287,6 +283,20 @@ public class Resolve
         {
             doResolveMethodCallExpression((MethodCallExpression) expression, entity, queryTarget);
         }
+        else if (expression instanceof NewExpression<?>)
+        {
+            doResolveNewExpression((NewExpression<?>) expression, entity, queryTarget);
+        }
+    }
+
+    private static void doResolveNewExpression(NewExpression<?> newExpression, Entity entity, List<?> queryTarget)
+    {
+        for (IExpression expression : newExpression.getExpressions())
+        {
+            doResolve(entity, expression, queryTarget);
+            entity.append(",");
+        }
+        entity.deleteLast();
     }
 
     private static void doResolveReferenceExpression(ReferenceExpression reference, Entity entity, List<?> queryTarget)
@@ -344,6 +354,13 @@ public class Resolve
                             reference.getClass())
                     ));
                     break;
+            }
+        }
+        else if (reference instanceof Class<?>)
+        {
+            for (IExpression param : methodCall.getParams())
+            {
+                doResolve(entity, param, queryTarget);
             }
         }
         else
