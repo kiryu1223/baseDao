@@ -17,8 +17,6 @@ public class ReferenceExpression implements IExpression
     @Override
     public String toString()
     {
-        return "ReferenceExpression{" +
-                "reference=" + reference +
-                '}';
+        return reference.toString();
     }
 }

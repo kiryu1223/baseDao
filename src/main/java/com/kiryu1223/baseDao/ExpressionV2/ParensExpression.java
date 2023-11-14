@@ -13,4 +13,10 @@ public class ParensExpression implements IExpression
     {
         return expression;
     }
+
+    @Override
+    public String toString()
+    {
+        return expression.toString();
+    }
 }

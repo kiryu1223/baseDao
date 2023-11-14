@@ -345,6 +345,11 @@ public class Resolve
                     doResolve(entity, methodCall.getParams().get(0), queryTarget);
                     break;
                 case "contains":
+                    doResolve(entity, methodCall.getSelector(), queryTarget);
+                    entity.append(" like ");
+                    doResolve(entity, methodCall.getParams().get(0), queryTarget);
+                    int index = entity.values.size() - 1;
+                    entity.values.set(index, "%" + entity.values.get(index) + "%");
                     break;
                 default:
                     doResolve(entity, methodCall.getSelector(), queryTarget);

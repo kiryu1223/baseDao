@@ -15,4 +15,9 @@ public class UnaryExpression extends OperatorExpression
         return expression;
     }
 
+    @Override
+    public String toString()
+    {
+        return operator.toString() + expression.toString();
+    }
 }

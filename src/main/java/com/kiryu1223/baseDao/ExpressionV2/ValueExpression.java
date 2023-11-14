@@ -13,4 +13,10 @@ public class ValueExpression<T> implements IExpression
     {
         return value;
     }
+
+    @Override
+    public String toString()
+    {
+        return value.toString();
+    }
 }

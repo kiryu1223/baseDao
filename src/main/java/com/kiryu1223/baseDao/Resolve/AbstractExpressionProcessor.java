@@ -175,11 +175,6 @@ public abstract class AbstractExpressionProcessor extends AbstractProcessor
     {
         if (!roundEnv.processingOver())
         {
-            for (Element root : roundEnv.getRootElements())
-            {
-                FindDown(root);
-            }
-
             //依托答辩↓
             Name expName = names.fromString("Expression");
             for (Element element : roundEnv.getElementsAnnotatedWith(Expression.class))
@@ -245,7 +240,6 @@ public abstract class AbstractExpressionProcessor extends AbstractProcessor
                         treeMaker,
                         names));
             }
-
 //            //获取全部类私有属性流程
 //            for (var rootElement : rootData)
 //            {

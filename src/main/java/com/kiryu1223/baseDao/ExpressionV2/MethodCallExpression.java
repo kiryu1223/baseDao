@@ -70,7 +70,7 @@ public class MethodCallExpression implements IExpression
         else if (selector instanceof MethodCallExpression)
         {
             MethodCallExpression methodCall = (MethodCallExpression) selector;
-            sel=methodCall.getValue();
+            sel = methodCall.getValue();
         }
         List<Class<?>> types = new ArrayList<>();
         for (IExpression param : params)
@@ -95,5 +95,20 @@ public class MethodCallExpression implements IExpression
         {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        for (IExpression param : params)
+        {
+            sb.append(param).append(",");
+        }
+        if (sb.length() > 0)
+        {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+        return selector + "." + selectedMethod + "(" + sb + ")";
     }
 }

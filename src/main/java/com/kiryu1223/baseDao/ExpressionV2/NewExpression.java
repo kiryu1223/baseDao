@@ -23,4 +23,20 @@ public class NewExpression<T> implements IExpression
     {
         return expressions;
     }
+
+    @Override
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        for (IExpression expression : expressions)
+        {
+            sb.append(expression).append(";").append("\n");
+        }
+        if (sb.length() > 0)
+        {
+            sb.deleteCharAt(sb.length() - 1);
+        }
+        return "new " + target.getSimpleName() + "()" +
+                "{{" + sb + "}}";
+    }
 }

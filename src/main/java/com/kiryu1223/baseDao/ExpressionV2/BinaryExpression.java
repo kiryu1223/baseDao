@@ -4,6 +4,7 @@ public class BinaryExpression extends OperatorExpression
 {
     private final IExpression left;
     private final IExpression right;
+
     BinaryExpression(IExpression left, IExpression right, Operator operator)
     {
         super(operator);
@@ -19,5 +20,11 @@ public class BinaryExpression extends OperatorExpression
     public IExpression getRight()
     {
         return right;
+    }
+
+    @Override
+    public String toString()
+    {
+        return left + " " + operator + " " + right;
     }
 }

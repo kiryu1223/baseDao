@@ -79,4 +79,10 @@ public class FieldSelectExpression implements IExpression
             throw new RuntimeException(e);
         }
     }
+
+    @Override
+    public String toString()
+    {
+        return selector + "." + selectedField;
+    }
 }

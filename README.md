@@ -35,27 +35,26 @@ public class baseDaoConfig
 
 3.使用idea连接数据库并右键生成持久化映射
 
-4.为你需要使用类添加`@Resolve`或`@Dao`注解
+4.~~为你需要使用类添加`@Resolve`或`@Dao`注解~~ 不再需要
 
 ```java
 import static com.kiryu1223.baseDao.Dao.DBFunc.Sum;
 
 @SpringBootTest
-@Resolve
 class HelloDockerApplicationTests
 {
     @Autowired
-    BaseDao baseDao;
+    BaseDao bd;
 
     @Test
     void contextLoads()
     {
-        baseDao.query(BookInfo.class)
+        bd.query(BookInfo.class)
                 .where(a -> 1 == 1)
-                .select(a -> Sum(a.getId()))
+                .select(a -> a)
                 .toListAndThen(r-> System.out.println(r));
 
-        //Sql: select sum(a.id) from `book_info` as a where ? = ? 
+        //Sql: select a.* from `book_info` as a where ? = ? 
         //values: [1, 1]
     }
 }
@@ -110,13 +109,11 @@ baseDao.query(user.class).select(a->a);
 select a.* from user as a
 ```
 
-- 返回单个数据库字段
+- ~~返回单个数据库字段~~ 暂时不再支持
 ```java
-baseDao.query(user.class).select(a->a.getId);
 ```
 等同于 
 ``` sql
-select a.id from user as a
 ```
 
 - 返回自己定义的新对象
@@ -156,7 +153,7 @@ baseDao.query(user.class)
 ```
 等同于
 ```sql
-select b.* from user as a leftjoin book as b
+select b.* from user as a left join book as b
 ```
 -----
 5.`on`
@@ -179,7 +176,7 @@ select b.* from user as a left join book as b on a.id = b.id
 
 ```java
 baseDao.query(user.class)
-        .orderBy(a->a.getid);
+        .orderBy(a->a.getid());
 ```
 等同于
 ```sql
@@ -200,15 +197,7 @@ baseDao.query(user.class)
 select a.* from user as a limit 3 offset 1
 ```
 -----
-8.`If`,`IfElse`
 
-**内置的条件动态sql**
-
-if的第一个参数为true时，if的第二个参数将参与sql生成
-
-ifelse根据的第一个参数来决定时第二个参数还是第三个参数将参与sql生成
-
------
 9.`toList`
 
 **返回List结果集**
@@ -242,10 +231,10 @@ List<MyType> res = baseDao.query(User.class)
 >默认为HashMap
 
 ```java
-Map<Integer,User> res = baseDao.query(User.class).toMap(k -> k.getId); //参数为一个表达式时，对返回的集合进行遍历获取MapKey
+Map<Integer,User> res = baseDao.query(User.class).toMap(k -> k.getId()); //参数为一个表达式时，对返回的集合进行遍历获取MapKey
 //select a.* from user as a
 
-Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId,v -> v.getName); //参数为两个个表达式时，对返回的集合进行遍历同时获取MapKey和MapValue
+Map<Integer,String> res = baseDao.query(User.class).toMap(k -> k.getId(),v -> v.getName()); //参数为两个个表达式时，对返回的集合进行遍历同时获取MapKey和MapValue
 //select a.* from user as a
 ```
 ## 新增(save)

@@ -6,7 +6,7 @@
 
     <groupId>io.github.kiryu1223</groupId>
     <artifactId>baseDao</artifactId>
-    <version>1.0.5</version>
+    <version>1.0.6</version>
 
     <name>baseDao</name>
     <description>java lambda to static expressionTree to SQL</description>
@@ -87,7 +87,7 @@
                             <!-- 这个地址，一定要和issue的评论中给出的地址一致！ -->
                             <nexusUrl>https://s01.oss.sonatype.org/</nexusUrl>
                             <!-- 如果希望发布后自动执行close和release操作，此处可以调整为true -->
-                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
                         </configuration>
                     </plugin>
 

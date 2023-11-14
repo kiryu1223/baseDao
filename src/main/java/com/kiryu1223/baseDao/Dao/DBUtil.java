@@ -3,6 +3,8 @@ package com.kiryu1223.baseDao.Dao;
 import com.kiryu1223.baseDao.Dao.Mapping.*;
 import com.kiryu1223.baseDao.ExpressionV2.*;
 import com.kiryu1223.baseDao.Dao.Func.Func0;
+import com.sun.org.slf4j.internal.Logger;
+import com.sun.org.slf4j.internal.LoggerFactory;
 
 
 import javax.sql.DataSource;
@@ -212,7 +214,6 @@ public class DBUtil
         ResultSet rs = null;
         try
         {
-            System.out.println(entity);
             conn = dataSource0.getConnection();
             ps = conn.prepareStatement(entity.sql.toString());
             setValues(ps, entity.values);
@@ -222,6 +223,7 @@ public class DBUtil
         catch (InstantiationException | IllegalAccessException | NoSuchMethodException | InvocationTargetException |
                SQLException e)
         {
+            System.out.println(entity);
             throw new RuntimeException(e);
         }
         finally
@@ -311,7 +313,6 @@ public class DBUtil
         PreparedStatement ps = null;
         try
         {
-            System.out.println(entity);
             conn = dataSource0.getConnection();
             ps = conn.prepareStatement(entity.sql.toString());
             setValues(ps, entity.values);
@@ -319,6 +320,7 @@ public class DBUtil
         }
         catch (SQLException e)
         {
+            System.out.println(entity);
             throw new RuntimeException(e);
         }
         finally

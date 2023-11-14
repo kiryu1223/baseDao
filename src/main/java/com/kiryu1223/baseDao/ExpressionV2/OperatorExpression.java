@@ -2,7 +2,7 @@ package com.kiryu1223.baseDao.ExpressionV2;
 
 public abstract class OperatorExpression implements IExpression
 {
-    private final Operator operator;
+    protected final Operator operator;
 
     protected OperatorExpression(Operator operator)
     {
@@ -13,4 +13,7 @@ public abstract class OperatorExpression implements IExpression
     {
         return operator;
     }
+
+    @Override
+    public abstract String toString();
 }
