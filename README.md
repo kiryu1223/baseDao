@@ -12,7 +12,7 @@ java lambda to static expressionTree to SQL
 <dependency>
     <groupId>io.github.kiryu1223</groupId>
     <artifactId>baseDao</artifactId>
-    <version>1.0.6</version>
+    <version>1.0.7</version>
 </dependency>
 ```
 
@@ -38,7 +38,7 @@ public class baseDaoConfig
 4.~~为你需要使用类添加`@Resolve`或`@Dao`注解~~ 不再需要
 
 ```java
-import static com.kiryu1223.baseDao.Dao.DBFunc.Sum;
+
 
 @SpringBootTest
 class HelloDockerApplicationTests
@@ -52,7 +52,7 @@ class HelloDockerApplicationTests
         bd.query(BookInfo.class)
                 .where(a -> 1 == 1)
                 .select(a -> a)
-                .toListAndThen(r-> System.out.println(r));
+                .toListAndThen(r -> System.out.println(r));
 
         //Sql: select a.* from `book_info` as a where ? = ? 
         //values: [1, 1]
