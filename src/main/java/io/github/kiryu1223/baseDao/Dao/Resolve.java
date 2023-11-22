@@ -603,6 +603,7 @@ public class Resolve
         IExpression ref = orderBy.getExpression();
         entity.append("order by ");
         doResolve(entity, ref, queryTarget);
+        entity.blank();
     }
 
     private static String indexMapping(int index)

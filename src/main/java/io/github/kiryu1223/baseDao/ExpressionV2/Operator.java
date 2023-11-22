@@ -45,9 +45,9 @@ public enum Operator
             case LT:
                 return "<";
             case And:
-                return "&&";
+                return "and";
             case Or:
-                return "||";
+                return "or";
             case PLUS:
                 return "+";
             case MINUS:
