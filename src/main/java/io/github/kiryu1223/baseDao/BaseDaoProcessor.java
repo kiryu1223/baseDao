@@ -1,17 +1,15 @@
-package io.github.kiryu1223.baseDao.Resolve;
+package io.github.kiryu1223.baseDao;
 
 import io.github.kiryu1223.baseDao.Dao.BaseDao;
 import io.github.kiryu1223.baseDao.Dao.Deleter.Delete;
 import io.github.kiryu1223.baseDao.Dao.Inserter.Insert;
-import io.github.kiryu1223.baseDao.Dao.Queryer.Query;
-import io.github.kiryu1223.baseDao.Dao.Queryer.Query2;
-import io.github.kiryu1223.baseDao.Dao.Queryer.Query3;
-import io.github.kiryu1223.baseDao.Dao.Queryer.Query4;
+import io.github.kiryu1223.baseDao.Dao.Queryer.*;
 import io.github.kiryu1223.baseDao.Dao.Updater.Update;
+import io.github.kiryu1223.expressionTree.AbstractExpressionProcessor;
 
 import java.util.List;
 
-public class DefaultExpressionProcessor extends AbstractExpressionProcessor
+public class BaseDaoProcessor extends AbstractExpressionProcessor
 {
     @Override
     public void registerManager(List<Class<?>> classList)

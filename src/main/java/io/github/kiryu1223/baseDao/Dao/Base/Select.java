@@ -1,7 +1,6 @@
 package io.github.kiryu1223.baseDao.Dao.Base;
 
-
-import io.github.kiryu1223.baseDao.ExpressionV2.NewExpression;
+import io.github.kiryu1223.expressionTree.expressionV2.NewExpression;
 
 public class Select<R> extends Base
 {

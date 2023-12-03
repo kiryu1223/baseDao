@@ -4,11 +4,11 @@ import io.github.kiryu1223.baseDao.Dao.Base.Where;
 import io.github.kiryu1223.baseDao.Dao.Cud.Cud;
 import io.github.kiryu1223.baseDao.Dao.Resolve;
 import io.github.kiryu1223.baseDao.Error.NoWayException;
-import io.github.kiryu1223.baseDao.ExpressionV2.IExpression;
-import io.github.kiryu1223.baseDao.Resolve.Expression;
 import io.github.kiryu1223.baseDao.Dao.DBUtil;
 import io.github.kiryu1223.baseDao.Dao.Entity;
-import io.github.kiryu1223.baseDao.Dao.Func.Func1;
+import io.github.kiryu1223.expressionTree.Expression;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnBoolean;
+import io.github.kiryu1223.expressionTree.expressionV2.IExpression;
 
 public class Delete<T> extends Cud<T>
 {
@@ -19,7 +19,7 @@ public class Delete<T> extends Cud<T>
         super(c1);
     }
 
-    public Delete<T> where(@Expression Func1<T> func)
+    public Delete<T> where(@Expression IReturnBoolean.B1<T> func)
     {
         throw new NoWayException();
     }

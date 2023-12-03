@@ -2,11 +2,11 @@ package io.github.kiryu1223.baseDao.Dao.Queryer;
 
 import io.github.kiryu1223.baseDao.Dao.Base.Base;
 import io.github.kiryu1223.baseDao.Dao.DBUtil;
-import io.github.kiryu1223.baseDao.Dao.Func.Func0;
-import io.github.kiryu1223.baseDao.Dao.Func.Func2;
 import io.github.kiryu1223.baseDao.Dao.Resolve;
-import io.github.kiryu1223.baseDao.ExpressionV2.NewExpression;
 import io.github.kiryu1223.baseDao.Dao.Entity;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnGeneric;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnVoid;
+import io.github.kiryu1223.expressionTree.expressionV2.NewExpression;
 
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ public class QueryResult<R>
         return entity;
     }
 
-    public void toEntityAndThen(Func2<Entity> then)
+    public void toEntityAndThen(IReturnVoid<Entity> then)
     {
         tryGetEntity();
         then.invoke(entity);
@@ -53,33 +53,33 @@ public class QueryResult<R>
         return DBUtil.startQuery(entity, newExpression);
     }
 
-    public <Key> Map<Key, R> toMap(Func0<R, Key> getKey)
+    public <Key> Map<Key, R> toMap(IReturnGeneric.G1<R, Key> getKey)
     {
         tryGetEntity();
         return DBUtil.startQuery(entity, newExpression, getKey);
     }
 
-    public <Key, Value> Map<Key, Value> toMap(Func0<R, Key> getKey, Func0<R, Value> getValue)
+    public <Key, Value> Map<Key, Value> toMap(IReturnGeneric.G1<R, Key> getKey, IReturnGeneric.G1<R, Value> getValue)
     {
         tryGetEntity();
         return DBUtil.startQuery(entity, newExpression, getKey, getValue);
     }
 
-    public void toListAndThen(Func2<List<R>> then)
+    public void toListAndThen(IReturnVoid<List<R>> then)
     {
         tryGetEntity();
         List<R> list = DBUtil.startQuery(entity, newExpression);
         then.invoke(list);
     }
 
-    public <Key> void toMapAndThen(Func0<R, Key> getKey, Func2<Map<Key, R>> then)
+    public <Key> void toMapAndThen(IReturnGeneric.G1<R, Key> getKey, IReturnVoid<Map<Key, R>> then)
     {
         tryGetEntity();
         Map<Key, R> map = DBUtil.startQuery(entity, newExpression, getKey);
         then.invoke(map);
     }
 
-    public <Key, Value> void toMapAndThen(Func0<R, Key> getKey, Func0<R, Value> getValue, Func2<Map<Key, Value>> then)
+    public <Key, Value> void toMapAndThen(IReturnGeneric.G1<R, Key> getKey, IReturnGeneric.G1<R, Value> getValue, IReturnVoid<Map<Key, Value>> then)
     {
         tryGetEntity();
         Map<Key, Value> map = DBUtil.startQuery(entity, newExpression, getKey, getValue);

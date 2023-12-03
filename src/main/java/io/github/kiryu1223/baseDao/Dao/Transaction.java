@@ -1,7 +1,7 @@
 package io.github.kiryu1223.baseDao.Dao;
 
-import io.github.kiryu1223.baseDao.Dao.Func.Func2;
 import io.github.kiryu1223.baseDao.Dao.Statement.Statement;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnVoid;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +38,7 @@ public class Transaction
         return DBUtil.transactionCud(entities, transactionType.getTransactionIsolation());
     }
 
-    public void debug(Func2<List<Entity>> func)
+    public void debug(IReturnVoid<List<Entity>> func)
     {
         List<Entity> entities = new ArrayList<>(commands.size());
         for (Statement<?> command : commands)

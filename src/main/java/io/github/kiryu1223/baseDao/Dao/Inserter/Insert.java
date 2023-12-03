@@ -2,13 +2,13 @@ package io.github.kiryu1223.baseDao.Dao.Inserter;
 
 import io.github.kiryu1223.baseDao.Dao.Base.SetData;
 import io.github.kiryu1223.baseDao.Dao.Cud.Cud;
-import io.github.kiryu1223.baseDao.Resolve.Expression;
 import io.github.kiryu1223.baseDao.Dao.DBUtil;
 import io.github.kiryu1223.baseDao.Dao.Entity;
-import io.github.kiryu1223.baseDao.Dao.ExpressionFunc;
-import io.github.kiryu1223.baseDao.Dao.Func.Func2;
 import io.github.kiryu1223.baseDao.Dao.Resolve;
 import io.github.kiryu1223.baseDao.Error.NoWayException;
+import io.github.kiryu1223.expressionTree.Expression;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.ExpressionTree;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnVoid;
 
 public class Insert<T> extends Cud<T>
 {
@@ -18,12 +18,12 @@ public class Insert<T> extends Cud<T>
         super(c1);
     }
 
-    public Insert<T> set(@Expression Func2<T> func)
+    public Insert<T> set(@Expression IReturnVoid<T> func)
     {
         throw new NoWayException();
     }
 
-    public Insert<T> set(ExpressionFunc.E1<Void,T> e1)
+    public Insert<T> set(ExpressionTree.E1<Void,T> e1)
     {
         bases.add(new SetData(e1.invoke(null,t1)));
         return this;

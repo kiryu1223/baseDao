@@ -5,8 +5,8 @@ import io.github.kiryu1223.baseDao.Dao.Inserter.Insert;
 import io.github.kiryu1223.baseDao.Dao.Statement.Statement;
 import io.github.kiryu1223.baseDao.Dao.Updater.Update;
 import io.github.kiryu1223.baseDao.DataBase.DataBase;
-import io.github.kiryu1223.baseDao.ExpressionV2.*;
 import io.github.kiryu1223.baseDao.Dao.Deleter.Delete;
+import io.github.kiryu1223.expressionTree.expressionV2.*;
 
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
@@ -292,11 +292,7 @@ public class Resolve
 
     private static void doResolve(Entity entity, IExpression expression, List<?> queryTarget)
     {
-        if (expression instanceof MappingExpression)
-        {
-            doResolveMappingExpression((MappingExpression) expression, entity, queryTarget);
-        }
-        else if (expression instanceof BinaryExpression)
+        if (expression instanceof BinaryExpression)
         {
             doResolveBinaryExpression((BinaryExpression) expression, entity, queryTarget);
         }
@@ -432,11 +428,6 @@ public class Resolve
             Object val = methodCall.getValue();
             entity.values.add(val);
         }
-    }
-
-    private static void doResolveMappingExpression(MappingExpression mapping, Entity entity, List<?> queryTarget)
-    {
-        doResolve(entity, mapping.getValue(), queryTarget);
     }
 
     private static void doResolveUnaryExpression(UnaryExpression unary, Entity entity, List<?> queryTarget)

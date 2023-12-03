@@ -9,6 +9,11 @@ public interface DBFunc
 
     public static <T> Double Sum(T t)
     {
-        return 0d;
+        return 0D;
+    }
+
+    public static <T> Double Avg(T t)
+    {
+        return 0D;
     }
 }

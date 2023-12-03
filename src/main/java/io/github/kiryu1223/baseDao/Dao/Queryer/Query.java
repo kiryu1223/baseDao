@@ -3,14 +3,15 @@ package io.github.kiryu1223.baseDao.Dao.Queryer;
 import io.github.kiryu1223.baseDao.Dao.*;
 import io.github.kiryu1223.baseDao.Dao.Base.*;
 import io.github.kiryu1223.baseDao.Dao.Statement.Statement;
-import io.github.kiryu1223.baseDao.Resolve.Expression;
-import io.github.kiryu1223.baseDao.Dao.Func.Func0;
-import io.github.kiryu1223.baseDao.Dao.Func.Func1;
-import io.github.kiryu1223.baseDao.Dao.Func.Func2;
 
 import io.github.kiryu1223.baseDao.Error.NoWayException;
-import io.github.kiryu1223.baseDao.ExpressionV2.IExpression;
-import io.github.kiryu1223.baseDao.ExpressionV2.NewExpression;
+import io.github.kiryu1223.expressionTree.Expression;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.ExpressionTree;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnBoolean;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnGeneric;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnVoid;
+import io.github.kiryu1223.expressionTree.expressionV2.IExpression;
+import io.github.kiryu1223.expressionTree.expressionV2.NewExpression;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,7 +38,7 @@ public class Query<T> extends Statement<T>
         return entity;
     }
 
-    public void toEntityAndThen(Func2<Entity> then)
+    public void toEntityAndThen(IReturnVoid<Entity> then)
     {
         tryGetEntity();
         then.invoke(entity);
@@ -49,33 +50,33 @@ public class Query<T> extends Statement<T>
         return DBUtil.startQuery(entity, IExpression.New(c1));
     }
 
-    public <Key> Map<Key, T> toMap(Func0<T, Key> getKey)
+    public <Key> Map<Key, T> toMap(IReturnGeneric.G1<T, Key> getKey)
     {
         tryGetEntity();
         return DBUtil.startQuery(entity, IExpression.New(c1), getKey);
     }
 
-    public <Key, Value> Map<Key, Value> toMap(Func0<T, Key> getKey, Func0<T, Value> getValue)
+    public <Key, Value> Map<Key, Value> toMap(IReturnGeneric.G1<T, Key> getKey, IReturnGeneric.G1<T, Value> getValue)
     {
         tryGetEntity();
         return DBUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
     }
 
-    public void toListAndThen(Func2<List<T>> then)
+    public void toListAndThen(IReturnVoid<List<T>> then)
     {
         tryGetEntity();
         List<T> list = DBUtil.startQuery(entity, IExpression.New(c1));
         then.invoke(list);
     }
 
-    public <Key> void toMapAndThen(Func0<T, Key> getKey, Func2<Map<Key, T>> then)
+    public <Key> void toMapAndThen(IReturnGeneric.G1<T, Key> getKey, IReturnVoid<Map<Key, T>> then)
     {
         tryGetEntity();
         Map<Key, T> map = DBUtil.startQuery(entity, IExpression.New(c1), getKey);
         then.invoke(map);
     }
 
-    public <Key, Value> void toMapAndThen(Func0<T, Key> getKey, Func0<T, Value> getValue, Func2<Map<Key, Value>> then)
+    public <Key, Value> void toMapAndThen(IReturnGeneric.G1<T, Key> getKey, IReturnGeneric.G1<T, Value> getValue, IReturnVoid<Map<Key, Value>> then)
     {
         tryGetEntity();
         Map<Key, Value> map = DBUtil.startQuery(entity, IExpression.New(c1), getKey, getValue);
@@ -90,44 +91,44 @@ public class Query<T> extends Statement<T>
         }
     }
 
-    public Query<T> where(@Expression Func1<T> func)
+    public Query<T> where(@Expression IReturnBoolean.B1<T> func)
     {
         throw new NoWayException();
     }
 
-    public <R> Query<T> orderBy(@Expression Func0<T, R> func)
+    public <R> Query<T> orderBy(@Expression IReturnGeneric.G1<T, R> func)
     {
         throw new NoWayException();
     }
 
-    public <R> Query<T> descOrderBy(@Expression Func0<T, R> func)
+    public <R> Query<T> descOrderBy(@Expression IReturnGeneric.G1<T, R> func)
     {
         throw new NoWayException();
     }
 
-    public <R> QueryResult<R> select(@Expression(NewExpression.class) Func0<T, R> func)
+    public <R> QueryResult<R> select(@Expression(NewExpression.class) IReturnGeneric.G1<T, R> func)
     {
         throw new NoWayException();
     }
 
-    public Query<T> where(ExpressionFunc.E1<Void, T> e1)
+    public Query<T> where(ExpressionTree.E1<Void, T> e1)
     {
         bases.add(new Where(e1.invoke(null, t1)));
         return this;
     }
 
-    public <R> QueryResult<R> select(ExpressionFunc.NR1<Void, T, R> r)
+    public <R> QueryResult<R> select(ExpressionTree.NR1<Void, T, R> r)
     {
         return new QueryResult<R>(bases, getQueryClasses(), getQueryTargets(), null, r.invoke(null, t1));
     }
 
-    public Query<T> orderBy(ExpressionFunc.E1<Void, T> e1)
+    public Query<T> orderBy(ExpressionTree.E1<Void, T> e1)
     {
         bases.add(new OrderBy(e1.invoke(null, t1), false));
         return this;
     }
 
-    public Query<T> descOrderBy(ExpressionFunc.E1<Void, T> e1)
+    public Query<T> descOrderBy(ExpressionTree.E1<Void, T> e1)
     {
         bases.add(new OrderBy(e1.invoke(null, t1), true));
         return this;

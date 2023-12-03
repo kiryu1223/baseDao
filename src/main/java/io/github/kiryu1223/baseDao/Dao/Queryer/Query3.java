@@ -1,14 +1,14 @@
 package io.github.kiryu1223.baseDao.Dao.Queryer;
 
 import io.github.kiryu1223.baseDao.Dao.Base.*;
-import io.github.kiryu1223.baseDao.Dao.ExpressionFunc;
 import io.github.kiryu1223.baseDao.Dao.Statement.Statement3;
-import io.github.kiryu1223.baseDao.Resolve.Expression;
-import io.github.kiryu1223.baseDao.Dao.Func.Func000;
-import io.github.kiryu1223.baseDao.Dao.Func.Func100;
-import io.github.kiryu1223.baseDao.ExpressionV2.NewExpression;
 import io.github.kiryu1223.baseDao.Error.NoWayException;
 import io.github.kiryu1223.baseDao.Dao.JoinType;
+import io.github.kiryu1223.expressionTree.Expression;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.ExpressionTree;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnBoolean;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnGeneric;
+import io.github.kiryu1223.expressionTree.expressionV2.NewExpression;
 
 import java.util.List;
 
@@ -19,56 +19,56 @@ public class Query3<T1, T2, T3> extends Statement3<T1, T2, T3>
         super(bases, joins, c1, c2, c3);
     }
 
-    public Query3<T1, T2, T3> on(@Expression Func100<T1, T2, T3> func)
+    public Query3<T1, T2, T3> on(@Expression IReturnBoolean.B3<T1, T2, T3> func)
     {
         throw new NoWayException();
     }
 
-    public Query3<T1, T2, T3> where(@Expression Func100<T1, T2, T3> func)
+    public Query3<T1, T2, T3> where(@Expression IReturnBoolean.B3<T1, T2, T3> func)
     {
         throw new NoWayException();
     }
 
-    public <R> Query3<T1, T2, T3> orderBy(@Expression Func000<T1, T2, T3, R> func)
+    public <R> Query3<T1, T2, T3> orderBy(@Expression IReturnGeneric.G3<T1, T2, T3, R> func)
     {
         throw new NoWayException();
     }
 
-    public <R> Query3<T1, T2, T3> descOrderBy(@Expression Func000<T1, T2, T3, R> func)
+    public <R> Query3<T1, T2, T3> descOrderBy(@Expression IReturnGeneric.G3<T1, T2, T3, R> func)
     {
         throw new NoWayException();
     }
 
-    public <R> QueryResult<R> select(@Expression(NewExpression.class) Func000<T1, T2, T3, R> func)
+    public <R> QueryResult<R> select(@Expression(NewExpression.class) IReturnGeneric.G3<T1, T2, T3, R> func)
     {
         throw new NoWayException();
     }
 
-    public Query3<T1, T2, T3> on(ExpressionFunc.E3<Void, T1, T2, T3> e3)
+    public Query3<T1, T2, T3> on(ExpressionTree.E3<Void, T1, T2, T3> e3)
     {
         bases.add(new On(e3.invoke(null, t1, t2, t3)));
         return this;
     }
 
 
-    public Query3<T1, T2, T3> where(ExpressionFunc.E3<Void, T1, T2, T3> e3)
+    public Query3<T1, T2, T3> where(ExpressionTree.E3<Void, T1, T2, T3> e3)
     {
         bases.add(new Where(e3.invoke(null, t1, t2, t3)));
         return this;
     }
 
-    public <R> QueryResult<R> select(ExpressionFunc.NR3<Void, T1, T2,T3, R> r)
+    public <R> QueryResult<R> select(ExpressionTree.NR3<Void, T1, T2,T3, R> r)
     {
         return new QueryResult<R>(bases, getQueryClasses(), getQueryTargets(), joins, r.invoke(null,t1,t2,t3));
     }
 
-    public Query3<T1, T2, T3> orderBy(ExpressionFunc.E3<Void, T1, T2, T3> e3)
+    public Query3<T1, T2, T3> orderBy(ExpressionTree.E3<Void, T1, T2, T3> e3)
     {
         bases.add(new OrderBy(e3.invoke(null, t1, t2, t3), false));
         return this;
     }
 
-    public Query3<T1, T2, T3> descOrderBy(ExpressionFunc.E3<Void, T1, T2, T3> e3)
+    public Query3<T1, T2, T3> descOrderBy(ExpressionTree.E3<Void, T1, T2, T3> e3)
     {
         bases.add(new OrderBy(e3.invoke(null, t1, t2, t3), true));
         return this;

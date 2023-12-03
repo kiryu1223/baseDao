@@ -1,23 +1,22 @@
 package io.github.kiryu1223.baseDao.Dao;
 
-import io.github.kiryu1223.baseDao.Dao.Func.Func0;
 import io.github.kiryu1223.baseDao.Dao.Mapping.BaseMapping;
 import io.github.kiryu1223.baseDao.Dao.Mapping.NewClassMapping;
 import io.github.kiryu1223.baseDao.Dao.Mapping.RefTableMapping;
 import io.github.kiryu1223.baseDao.Dao.Mapping.SetterMapping;
-import io.github.kiryu1223.baseDao.ExpressionV2.IExpression;
-import io.github.kiryu1223.baseDao.ExpressionV2.MethodCallExpression;
-import io.github.kiryu1223.baseDao.ExpressionV2.NewExpression;
+import io.github.kiryu1223.expressionTree.FunctionalInterface.IReturnGeneric;
+import io.github.kiryu1223.expressionTree.expressionV2.IExpression;
+import io.github.kiryu1223.expressionTree.expressionV2.MethodCallExpression;
+import io.github.kiryu1223.expressionTree.expressionV2.NewExpression;
 
 
 import javax.sql.DataSource;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -96,19 +95,19 @@ public class DBUtil
 
     private static <R> List<R> getResultList(ResultSet rs, NewExpression<R> newExpression) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
     {
-        java.sql.ResultSetMetaData md = rs.getMetaData();
+        ResultSetMetaData md = rs.getMetaData();
         Class<R> resultType = newExpression.getTarget();
         List<R> result = new ArrayList<>();
         if (newExpression.getExpressions().isEmpty())
         {
-            Map<String, java.lang.reflect.Field> map = Cache.getDbNameToFieldMapping(resultType);
+            Map<String, Field> map = Cache.getDbNameToFieldMapping(resultType);
             while (rs.next())
             {
                 R r = resultType.getConstructor().newInstance();
                 for (int i = 1; i <= md.getColumnCount(); i++)
                 {
                     String rName = md.getColumnLabel(i);
-                    java.lang.reflect.Field field = map.get(rName);
+                    Field field = map.get(rName);
                     Object o = rs.getObject(rName, field.getType());
                     if (o != null)
                     {
@@ -122,7 +121,7 @@ public class DBUtil
         {
             List<BaseMapping> baseMappings = new ArrayList<>();
             doResolve(newExpression, baseMappings);
-            java.lang.reflect.Constructor<R> constructor = resultType.getConstructor();
+            Constructor<R> constructor = resultType.getConstructor();
             while (rs.next())
             {
                 R r = constructor.newInstance();
@@ -154,13 +153,13 @@ public class DBUtil
         {
             RefTableMapping refTableMapping = (RefTableMapping) iMapping;
             Class<?> target = refTableMapping.getTarget();
-            Map<String, java.lang.reflect.Field> map = Cache.getDbNameToFieldMapping(target);
+            Map<String, Field> map = Cache.getDbNameToFieldMapping(target);
             Object temp = target.getConstructor().newInstance();
-            java.sql.ResultSetMetaData metaData = rs.getMetaData();
+            ResultSetMetaData metaData = rs.getMetaData();
             for (int i = 0; i < map.size(); i++)
             {
                 String name = metaData.getColumnLabel(offset[0]);
-                java.lang.reflect.Field field = map.get(name);
+                Field field = map.get(name);
                 Object o = rs.getObject(offset[0]++, field.getType());
                 if (o != null)
                 {
@@ -184,9 +183,9 @@ public class DBUtil
         }
     }
 
-    private static <Key, R> Map<Key, R> getResultMap(ResultSet rs, NewExpression<R> newExpression, Func0<R, Key> getKey) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
+    private static <Key, R> Map<Key, R> getResultMap(ResultSet rs, NewExpression<R> newExpression, IReturnGeneric.G1<R, Key> getKey) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
     {
-        java.sql.ResultSetMetaData md = rs.getMetaData();
+        ResultSetMetaData md = rs.getMetaData();
         Class<R> resultType = newExpression.getTarget();
         Map<Key, R> result = new HashMap<>();
         List<R> list = getResultList(rs, newExpression);
@@ -197,9 +196,9 @@ public class DBUtil
         return result;
     }
 
-    private static <Key, Value, R> Map<Key, Value> getResultMap(ResultSet rs, NewExpression<R> newExpression, Func0<R, Key> getKey, Func0<R, Value> getValue) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
+    private static <Key, Value, R> Map<Key, Value> getResultMap(ResultSet rs, NewExpression<R> newExpression, IReturnGeneric.G1<R, Key> getKey, IReturnGeneric.G1<R, Value> getValue) throws SQLException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException
     {
-        java.sql.ResultSetMetaData md = rs.getMetaData();
+        ResultSetMetaData md = rs.getMetaData();
         Class<R> resultType = newExpression.getTarget();
         Map<Key, Value> result = new HashMap<>();
         List<R> list = getResultList(rs, newExpression);
@@ -244,7 +243,7 @@ public class DBUtil
         }
     }
 
-    public static <Key, R> Map<Key, R> startQuery(Entity entity, NewExpression<R> newExpression, Func0<R, Key> getKey)
+    public static <Key, R> Map<Key, R> startQuery(Entity entity, NewExpression<R> newExpression, IReturnGeneric.G1<R, Key> getKey)
     {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -277,7 +276,7 @@ public class DBUtil
         }
     }
 
-    public static <Key, Value, R> Map<Key, Value> startQuery(Entity entity, NewExpression<R> newExpression, Func0<R, Key> getKey, Func0<R, Value> getValue)
+    public static <Key, Value, R> Map<Key, Value> startQuery(Entity entity, NewExpression<R> newExpression, IReturnGeneric.G1<R, Key> getKey, IReturnGeneric.G1<R, Value> getValue)
     {
         Connection conn = null;
         PreparedStatement ps = null;
@@ -285,7 +284,7 @@ public class DBUtil
         try
         {
             conn = dataSource0.getConnection();
-            ps = conn.prepareStatement(entity.sql.toString());
+            ps = conn.prepareStatement(entity.toSql());
             setValues(ps, entity.values);
             rs = ps.executeQuery();
             return getResultMap(rs, newExpression, getKey, getValue);
@@ -317,7 +316,7 @@ public class DBUtil
         try
         {
             conn = dataSource0.getConnection();
-            ps = conn.prepareStatement(entity.sql.toString());
+            ps = conn.prepareStatement(entity.toSql());
             setValues(ps, entity.values);
             return ps.executeUpdate();
         }
@@ -440,7 +439,7 @@ public class DBUtil
             }
             for (Entity entity : entityList)
             {
-                PreparedStatement ps = conn.prepareStatement(entity.toString());
+                PreparedStatement ps = conn.prepareStatement(entity.toSql());
                 setValues(ps, entity.values);
                 int count = ps.executeUpdate();
                 if (count < 1)
