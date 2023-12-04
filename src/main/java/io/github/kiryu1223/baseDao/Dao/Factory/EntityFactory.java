@@ -8,14 +8,6 @@ public class EntityFactory
 {
     private static final ConcurrentLinkedDeque<Entity> Pool = new ConcurrentLinkedDeque<>();
 
-    static
-    {
-        for (int i = 0; i < 128; i++)
-        {
-            Pool.push(new Entity());
-        }
-    }
-
     public static Entity get()
     {
         Entity res = Pool.poll();
