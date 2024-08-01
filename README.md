@@ -1,3 +1,5 @@
+# 不再维护‼‼‼ 请转向[Drink](https://github.com/kiryu1223/drink)
+
 # baseDao
 java lambda to static expressionTree to SQL
 
